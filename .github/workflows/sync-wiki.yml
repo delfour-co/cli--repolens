@@ -1,0 +1,146 @@
+name: Sync Wiki
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'wiki/**'
+      - 'README.md'
+      - 'DEVELOPMENT.md'
+      - 'CHANGELOG.md'
+      - '.github/workflows/sync-wiki.yml'
+  workflow_dispatch:  # Permet de déclencher manuellement
+
+permissions:
+  contents: write  # Nécessaire pour pousser vers le WIKI
+
+jobs:
+  sync-wiki:
+    name: Synchroniser le WIKI
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Nécessaire pour avoir l'historique Git complet
+      
+      - name: Configurer Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+      
+      - name: Vérifier que le WIKI est activé
+        id: check-wiki
+        run: |
+          REPO="${{ github.repository }}"
+          WIKI_REPO="${REPO}.wiki"
+          
+          # Vérifier si le WIKI existe
+          if git ls-remote "https://github.com/${WIKI_REPO}.git" &>/dev/null; then
+            echo "wiki_exists=true" >> $GITHUB_OUTPUT
+            echo "✅ WIKI trouvé: ${WIKI_REPO}"
+          else
+            echo "wiki_exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️  WIKI non trouvé: ${WIKI_REPO}"
+            echo "⚠️  Activez le WIKI dans Settings > Features > Wikis"
+          fi
+      
+      - name: Cloner le WIKI
+        if: steps.check-wiki.outputs.wiki_exists == 'true'
+        run: |
+          REPO="${{ github.repository }}"
+          WIKI_REPO="${REPO}.wiki"
+          WIKI_DIR=$(mktemp -d)
+          echo "WIKI_DIR=${WIKI_DIR}" >> $GITHUB_ENV
+          
+          echo "📥 Clonage du WIKI..."
+          git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${WIKI_REPO}.git" "$WIKI_DIR" || {
+            echo "📝 Initialisation d'un nouveau WIKI..."
+            mkdir -p "$WIKI_DIR"
+            cd "$WIKI_DIR"
+            git init
+            git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${WIKI_REPO}.git"
+          }
+      
+      - name: Synchroniser les pages
+        if: steps.check-wiki.outputs.wiki_exists == 'true'
+        run: |
+          echo "🔄 Synchronisation des pages..."
+          
+          UPDATED=0
+          CREATED=0
+          
+          # Copier toutes les pages du dossier wiki/ vers le WIKI
+          for page in wiki/*.md; do
+            if [ -f "$page" ]; then
+              page_name=$(basename "$page")
+              
+              # Ignorer README.md du dossier wiki
+              if [ "$page_name" = "README.md" ]; then
+                continue
+              fi
+              
+              if [ -f "$WIKI_DIR/$page_name" ]; then
+                # Vérifier si le contenu a changé
+                if ! cmp -s "$page" "$WIKI_DIR/$page_name"; then
+                  cp "$page" "$WIKI_DIR/$page_name"
+                  echo "  ✏️  Mise à jour: $page_name"
+                  ((UPDATED++))
+                else
+                  echo "  ✓  Déjà à jour: $page_name"
+                fi
+              else
+                cp "$page" "$WIKI_DIR/$page_name"
+                echo "  ➕ Création: $page_name"
+                ((CREATED++))
+              fi
+            fi
+          done
+          
+          echo "UPDATED=${UPDATED}" >> $GITHUB_ENV
+          echo "CREATED=${CREATED}" >> $GITHUB_ENV
+      
+      - name: Commit et push les changements
+        if: steps.check-wiki.outputs.wiki_exists == 'true' && (env.UPDATED > 0 || env.CREATED > 0)
+        run: |
+          cd "$WIKI_DIR"
+          
+          # Vérifier s'il y a des changements
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "📝 Commit des changements..."
+            git add -A
+            
+            COMMIT_MSG="🔄 Synchronisation automatique du WIKI
+            
+            - Mise à jour depuis le dépôt principal
+            - Commit source: ${{ github.sha }}
+            - Workflow: ${{ github.workflow }}
+            - Déclenché par: ${{ github.actor }}
+            - Date: $(date -Iseconds)"
+            
+            git commit -m "$COMMIT_MSG" || exit 0
+            
+            # Déterminer la branche par défaut
+            DEFAULT_BRANCH="main"
+            if ! git ls-remote --heads origin "$DEFAULT_BRANCH" | grep -q "$DEFAULT_BRANCH"; then
+              DEFAULT_BRANCH="master"
+            fi
+            
+            echo "📤 Push vers GitHub..."
+            git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.wiki.git" HEAD:$DEFAULT_BRANCH
+            
+            echo "✅ WIKI synchronisé avec succès!"
+            echo "   - Pages mises à jour: ${UPDATED}"
+            echo "   - Pages créées: ${CREATED}"
+          else
+            echo "ℹ️  Aucun changement détecté"
+          fi
+      
+      - name: Avertissement si le WIKI n'est pas activé
+        if: steps.check-wiki.outputs.wiki_exists == 'false'
+        run: |
+          echo "::warning::Le WIKI n'est pas activé pour ce repository"
+          echo "Activez-le dans: Settings > Features > Wikis"
+          echo "Puis relancez ce workflow"
+          exit 0  # Ne pas faire échouer le workflow
