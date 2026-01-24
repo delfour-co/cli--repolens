@@ -5,5 +5,4 @@ pub mod results;
 pub mod categories;
 pub mod patterns;
 
-pub use engine::RulesEngine;
-pub use results::{AuditResults, Finding, Severity};
+pub use results::{Finding, Severity};

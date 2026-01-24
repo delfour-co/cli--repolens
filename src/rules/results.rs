@@ -15,6 +15,7 @@ pub enum Severity {
 }
 
 impl Severity {
+    #[allow(dead_code)]
     pub fn from_str(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "critical" | "error" => Some(Self::Critical),
@@ -112,6 +113,7 @@ impl AuditResults {
     }
 
     /// Add a finding
+    #[allow(dead_code)]
     pub fn add_finding(&mut self, finding: Finding) {
         self.findings.push(finding);
     }
@@ -153,11 +155,13 @@ impl AuditResults {
     }
 
     /// Get total number of findings
+    #[allow(dead_code)]
     pub fn total_count(&self) -> usize {
         self.findings.len()
     }
 
     /// Check if there are no findings
+    #[allow(dead_code)]
     pub fn is_clean(&self) -> bool {
         self.findings.is_empty()
     }

@@ -69,7 +69,7 @@ async fn check_dependencies(scanner: &Scanner) -> Result<Vec<Finding>> {
     let mut findings = Vec::new();
 
     // Check for lock files (indicates dependency management)
-    let lock_files = [
+    let _lock_files = [
         ("package-lock.json", "npm"),
         ("yarn.lock", "Yarn"),
         ("pnpm-lock.yaml", "pnpm"),

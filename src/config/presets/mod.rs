@@ -34,6 +34,7 @@ impl Preset {
     }
 
     /// Get a description of the preset
+    #[allow(dead_code)]
     pub fn description(&self) -> &'static str {
         match self {
             Self::OpenSource => "Prepare repository for public open source release",
@@ -43,6 +44,7 @@ impl Preset {
     }
 
     /// Get the rules that should be enabled for this preset
+    #[allow(dead_code)]
     pub fn enabled_rules(&self) -> Vec<&'static str> {
         match self {
             Self::OpenSource => vec![
@@ -110,6 +112,7 @@ impl Preset {
     }
 
     /// Get rules with critical severity for this preset
+    #[allow(dead_code)]
     pub fn critical_rules(&self) -> Vec<&'static str> {
         match self {
             Self::OpenSource => vec![

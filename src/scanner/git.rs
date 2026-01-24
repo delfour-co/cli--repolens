@@ -46,6 +46,7 @@ fn parse_repo_name_from_url(url: &str) -> Option<String> {
 }
 
 /// Get the default branch name
+#[allow(dead_code)]
 pub fn get_default_branch(root: &Path) -> Option<String> {
     // Try to get from git symbolic-ref
     let output = Command::new("git")
@@ -82,6 +83,7 @@ pub fn get_default_branch(root: &Path) -> Option<String> {
 }
 
 /// Check if the repository is a git repository
+#[allow(dead_code)]
 pub fn is_git_repository(root: &Path) -> bool {
     root.join(".git").exists()
 }

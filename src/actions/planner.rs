@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use crate::config::Config;
-use crate::rules::results::{AuditResults, Severity};
+use crate::rules::results::AuditResults;
 
 use super::plan::{Action, ActionOperation, ActionPlan, BranchProtectionSettings, GitHubRepoSettings};
 

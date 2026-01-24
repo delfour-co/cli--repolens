@@ -133,6 +133,7 @@ impl Config {
     }
 
     /// Get severity override for a rule
+    #[allow(dead_code)]
     pub fn get_rule_severity(&self, rule_id: &str) -> Option<&str> {
         self.rules
             .get(rule_id)
@@ -154,6 +155,7 @@ impl Config {
     }
 
     /// Check if a URL is allowed (for enterprise mode)
+    #[allow(dead_code)]
     pub fn is_url_allowed(&self, url: &str) -> bool {
         if self.urls.allowed_internal.is_empty() {
             return false;

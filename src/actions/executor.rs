@@ -1,7 +1,7 @@
 //! Action executor - Executes planned actions
 
 use anyhow::Result;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 use crate::config::Config;
 
@@ -18,13 +18,13 @@ pub struct ActionResult {
 
 /// Executes actions from an action plan
 pub struct ActionExecutor {
-    config: Config,
+    _config: Config,
 }
 
 impl ActionExecutor {
     /// Create a new action executor
     pub fn new(config: Config) -> Self {
-        Self { config }
+        Self { _config: config }
     }
 
     /// Execute all actions in the plan

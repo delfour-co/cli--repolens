@@ -96,6 +96,7 @@ impl Scanner {
     }
 
     /// Get all files
+    #[allow(dead_code)]
     pub fn all_files(&self) -> &[FileInfo] {
         &self.file_cache
     }

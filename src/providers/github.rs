@@ -5,12 +5,14 @@ use serde::Deserialize;
 use std::process::Command;
 
 /// GitHub provider for repository operations
+#[allow(dead_code)]
 pub struct GitHubProvider {
     repo_owner: String,
     repo_name: String,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct RepoInfo {
     name: String,
     owner: RepoOwner,
@@ -24,12 +26,14 @@ struct RepoInfo {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct RepoOwner {
     login: String,
 }
 
 impl GitHubProvider {
     /// Create a new GitHub provider for the current repository
+    #[allow(dead_code)]
     pub fn new() -> Result<Self> {
         let (owner, name) = Self::get_repo_info()?;
         Ok(Self {
@@ -39,6 +43,7 @@ impl GitHubProvider {
     }
 
     /// Check if GitHub CLI is available and authenticated
+    #[allow(dead_code)]
     pub fn is_available() -> bool {
         Command::new("gh")
             .args(["auth", "status"])
@@ -48,6 +53,7 @@ impl GitHubProvider {
     }
 
     /// Get repository owner and name
+    #[allow(dead_code)]
     fn get_repo_info() -> Result<(String, String)> {
         let output = Command::new("gh")
             .args([
@@ -73,11 +79,13 @@ impl GitHubProvider {
     }
 
     /// Get the full repository name (owner/name)
+    #[allow(dead_code)]
     pub fn full_name(&self) -> String {
         format!("{}/{}", self.repo_owner, self.repo_name)
     }
 
     /// Get repository visibility
+    #[allow(dead_code)]
     pub fn get_visibility(&self) -> Result<String> {
         let output = Command::new("gh")
             .args([
@@ -92,11 +100,13 @@ impl GitHubProvider {
     }
 
     /// Check if the repository is public
+    #[allow(dead_code)]
     pub fn is_public(&self) -> Result<bool> {
         Ok(self.get_visibility()? == "public")
     }
 
     /// Get list of repository secrets (names only)
+    #[allow(dead_code)]
     pub fn list_secrets(&self) -> Result<Vec<String>> {
         let output = Command::new("gh")
             .args(["secret", "list", "--json", "name", "-q", ".[].name"])
@@ -112,6 +122,7 @@ impl GitHubProvider {
     }
 
     /// Get list of repository variables
+    #[allow(dead_code)]
     pub fn list_variables(&self) -> Result<Vec<String>> {
         let output = Command::new("gh")
             .args(["variable", "list", "--json", "name", "-q", ".[].name"])
@@ -127,6 +138,7 @@ impl GitHubProvider {
     }
 
     /// Get branch protection status
+    #[allow(dead_code)]
     pub fn get_branch_protection(&self, branch: &str) -> Result<Option<BranchProtection>> {
         let output = Command::new("gh")
             .args([
@@ -150,6 +162,7 @@ impl GitHubProvider {
 
 /// Branch protection settings from GitHub API
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct BranchProtection {
     #[serde(rename = "required_status_checks")]
     pub required_status_checks: Option<StatusChecks>,
@@ -171,33 +184,39 @@ pub struct BranchProtection {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct StatusChecks {
     pub strict: bool,
     pub contexts: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct EnforceAdmins {
     pub enabled: bool,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct PullRequestReviews {
     #[serde(rename = "required_approving_review_count")]
     pub required_approving_review_count: u32,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct RequiredLinearHistory {
     pub enabled: bool,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct AllowForcePushes {
     pub enabled: bool,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct AllowDeletions {
     pub enabled: bool,
 }

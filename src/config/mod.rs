@@ -7,7 +7,6 @@ pub use loader::Config;
 pub use presets::Preset;
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 /// Rule configuration
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

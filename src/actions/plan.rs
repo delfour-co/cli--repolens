@@ -167,6 +167,7 @@ impl ActionPlan {
     }
 
     /// Get the number of actions
+    #[allow(dead_code)]
     pub fn len(&self) -> usize {
         self.actions.len()
     }

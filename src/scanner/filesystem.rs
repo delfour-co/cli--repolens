@@ -11,6 +11,7 @@ pub struct FileInfo {
     /// File size in bytes
     pub size: u64,
     /// Whether the file is a directory
+    #[allow(dead_code)]
     pub is_dir: bool,
 }
 
