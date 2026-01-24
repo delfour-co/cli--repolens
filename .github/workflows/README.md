@@ -33,18 +33,21 @@ Déclenchement : Automatique après que le workflow CI soit terminé avec succè
 Déclenchement : Manuel via `workflow_dispatch`
 
 **Fonctionnalités :**
+- Vérifie que le workflow CI a réussi avant de créer la release
 - Auto-incrémentation de version (patch, minor, major)
 - Mise à jour automatique de `Cargo.toml`
-- Exécution des tests et vérifications
+- Ne refait **pas** les vérifications (tests, fmt, clippy) - elles sont déjà faites dans CI
 - Création et push automatique du tag
 - Déclenche automatiquement le workflow `release.yml`
 
 **Utilisation :**
-1. Aller sur Actions → Create Release
-2. Cliquer sur "Run workflow"
-3. Choisir le type d'incrémentation
-4. Cocher "Create and push tag automatically"
-5. Lancer le workflow
+1. S'assurer que le workflow CI a réussi
+2. Aller sur Actions → Create Release
+3. Cliquer sur "Run workflow"
+4. Choisir le type d'incrémentation (patch, minor, major)
+5. Cocher "Create and push tag automatically"
+6. Optionnel : Cocher "Skip CI check" si vous êtes sûr que la CI a passé
+7. Lancer le workflow
 
 ### 4. Release (`release.yml`)
 

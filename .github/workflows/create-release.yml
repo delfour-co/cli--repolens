@@ -16,6 +16,11 @@ on:
         required: true
         type: boolean
         default: true
+      skip_ci_check:
+        description: 'Skip CI check (use only if CI already passed)'
+        required: false
+        type: boolean
+        default: false
 
 env:
   CARGO_TERM_COLOR: always
@@ -103,9 +108,58 @@ jobs:
           fi
           echo "Tag ${NEW_TAG} is available"
 
+  check-ci:
+    name: Check CI Status
+    if: github.event.inputs.skip_ci_check != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check latest CI workflow run
+        id: ci_check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: workflows } = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ci.yml',
+              branch: 'main',
+              per_page: 1
+            });
+            
+            if (workflows.workflow_runs.length === 0) {
+              core.setFailed('No CI workflow runs found');
+              return;
+            }
+            
+            const latestRun = workflows.workflow_runs[0];
+            const conclusion = latestRun.conclusion;
+            const status = latestRun.status;
+            
+            console.log(`Latest CI run: ${latestRun.id}, status: ${status}, conclusion: ${conclusion}`);
+            
+            if (status !== 'completed') {
+              core.setFailed(`CI workflow is still running (status: ${status})`);
+              return;
+            }
+            
+            if (conclusion !== 'success') {
+              core.setFailed(`CI workflow did not succeed (conclusion: ${conclusion}). Please ensure CI passes before creating a release.`);
+              return;
+            }
+            
+            console.log('✅ CI workflow passed successfully');
+            core.setOutput('ci_passed', 'true');
+
   prepare-release:
     name: Prepare Release
-    needs: calculate-version
+    needs: [calculate-version, check-ci]
+    # Run if: calculate-version succeeded AND (check-ci succeeded OR check-ci was skipped OR skip_ci_check is true)
+    if: needs.calculate-version.result == 'success' && (needs.check-ci.result == 'success' || needs.check-ci.result == 'skipped' || github.event.inputs.skip_ci_check == 'true')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -116,7 +170,7 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-          ref: ${{ github.ref == 'refs/heads/main' && 'main' || github.ref == 'refs/heads/master' && 'master' || 'main' }}
+          ref: main
 
       - name: Configure Git
         run: |
@@ -131,60 +185,16 @@ jobs:
           echo "Updated Cargo.toml:"
           grep '^version =' Cargo.toml
 
-      - name: Run tests
-        uses: dtolnay/rust-toolchain@stable
-        run: |
-          cargo test --quiet || {
-            echo "Error: Tests failed"
-            exit 1
-          }
-
-      - name: Check formatting
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt
-        run: |
-          cargo fmt --all -- --check || {
-            echo "Error: Code is not properly formatted"
-            exit 1
-          }
-
-      - name: Run clippy
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-        run: |
-          cargo clippy -- -D warnings || {
-            echo "Error: Clippy found issues"
-            exit 1
-          }
-
-      - name: Determine branch name
-        id: branch
-        run: |
-          # Try to get branch from ref, fallback to main
-          if [ "${{ github.ref }}" = "refs/heads/main" ] || [ "${{ github.ref }}" = "refs/heads/master" ]; then
-            BRANCH="${{ github.ref_name }}"
-          else
-            # For workflow_dispatch, default to main
-            BRANCH="main"
-            # Try to checkout main if we're not on it
-            git checkout main 2>/dev/null || git checkout master 2>/dev/null || true
-          fi
-          echo "branch=${BRANCH}" >> $GITHUB_OUTPUT
-          echo "Using branch: ${BRANCH}"
-
       - name: Commit version change
         if: github.event.inputs.create_tag == 'true'
         run: |
           NEW_VERSION="${{ needs.calculate-version.outputs.version }}"
-          BRANCH_NAME="${{ steps.branch.outputs.branch }}"
           
           git add Cargo.toml
           git commit -m "chore: bump version to ${NEW_VERSION}" || exit 0
-          git push origin "${BRANCH_NAME}"
+          git push origin main
           
-          echo "Pushed version bump commit to ${BRANCH_NAME}"
+          echo "Pushed version bump commit to main"
 
       - name: Create and push tag
         if: github.event.inputs.create_tag == 'true'
