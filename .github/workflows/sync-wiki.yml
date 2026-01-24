@@ -103,14 +103,14 @@ jobs:
                 if ! cmp -s "$page" "$WIKI_DIR/$page_name"; then
                   cp "$page" "$WIKI_DIR/$page_name"
                   echo "  ✏️  Mise à jour: $page_name"
-                  ((UPDATED++))
+                  UPDATED=$((UPDATED + 1))
                 else
                   echo "  ✓  Déjà à jour: $page_name"
                 fi
               else
                 cp "$page" "$WIKI_DIR/$page_name"
                 echo "  ➕ Création: $page_name"
-                ((CREATED++))
+                CREATED=$((CREATED + 1))
               fi
             fi
           done
