@@ -20,7 +20,10 @@ impl Preset {
             "opensource" | "open-source" | "oss" => Ok(Self::OpenSource),
             "enterprise" | "ent" | "internal" => Ok(Self::Enterprise),
             "strict" | "secure" | "compliance" => Ok(Self::Strict),
-            _ => bail!("Unknown preset: {}. Valid presets: opensource, enterprise, strict", name),
+            _ => bail!(
+                "Unknown preset: {}. Valid presets: opensource, enterprise, strict",
+                name
+            ),
         }
     }
 
@@ -115,16 +118,8 @@ impl Preset {
     #[allow(dead_code)]
     pub fn critical_rules(&self) -> Vec<&'static str> {
         match self {
-            Self::OpenSource => vec![
-                "secrets/hardcoded",
-                "secrets/files",
-                "docs/license",
-            ],
-            Self::Enterprise => vec![
-                "secrets/hardcoded",
-                "secrets/files",
-                "security/codeowners",
-            ],
+            Self::OpenSource => vec!["secrets/hardcoded", "secrets/files", "docs/license"],
+            Self::Enterprise => vec!["secrets/hardcoded", "secrets/files", "security/codeowners"],
             Self::Strict => vec![
                 "secrets/hardcoded",
                 "secrets/files",

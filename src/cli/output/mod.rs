@@ -1,20 +1,20 @@
 //! Output formatting module for CLI
 
-mod terminal;
-mod json;
-mod sarif;
-mod markdown;
 mod html;
+mod json;
+mod markdown;
+mod sarif;
+mod terminal;
 
-pub use terminal::TerminalOutput;
-pub use json::JsonOutput;
-pub use sarif::SarifOutput;
-pub use markdown::MarkdownReport;
 pub use html::HtmlReport;
+pub use json::JsonOutput;
+pub use markdown::MarkdownReport;
+pub use sarif::SarifOutput;
+pub use terminal::TerminalOutput;
 
-use anyhow::Result;
-use crate::rules::results::AuditResults;
 use crate::actions::plan::ActionPlan;
+use crate::rules::results::AuditResults;
+use anyhow::Result;
 
 /// Trait for rendering plan output
 pub trait OutputRenderer {

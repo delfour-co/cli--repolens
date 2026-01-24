@@ -4,8 +4,8 @@ use anyhow::Result;
 use colored::Colorize;
 
 use super::{OutputRenderer, ReportRenderer};
-use crate::rules::results::{AuditResults, Finding, Severity};
 use crate::actions::plan::ActionPlan;
+use crate::rules::results::{AuditResults, Finding, Severity};
 
 pub struct TerminalOutput;
 
@@ -43,7 +43,11 @@ impl TerminalOutput {
         // Critical findings
         let critical: Vec<_> = results.findings_by_severity(Severity::Critical).collect();
         if !critical.is_empty() {
-            output.push_str(&format!("{} ({})\\n", "❌ CRITICAL".red().bold(), critical.len()));
+            output.push_str(&format!(
+                "{} ({})\\n",
+                "❌ CRITICAL".red().bold(),
+                critical.len()
+            ));
             for finding in critical {
                 output.push_str(&self.format_finding(finding));
             }
@@ -53,7 +57,11 @@ impl TerminalOutput {
         // Warning findings
         let warnings: Vec<_> = results.findings_by_severity(Severity::Warning).collect();
         if !warnings.is_empty() {
-            output.push_str(&format!("{} ({})\\n", "⚠️  WARNING".yellow().bold(), warnings.len()));
+            output.push_str(&format!(
+                "{} ({})\\n",
+                "⚠️  WARNING".yellow().bold(),
+                warnings.len()
+            ));
             for finding in warnings {
                 output.push_str(&self.format_finding(finding));
             }

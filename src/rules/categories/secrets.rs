@@ -43,9 +43,8 @@ async fn check_hardcoded_secrets(scanner: &Scanner, config: &Config) -> Result<V
 
     // File extensions to scan
     let extensions = [
-        "js", "ts", "jsx", "tsx", "py", "rb", "php", "java", "go", "rs",
-        "cpp", "c", "yml", "yaml", "json", "toml", "env", "config", "conf",
-        "sql", "sh", "bash",
+        "js", "ts", "jsx", "tsx", "py", "rb", "php", "java", "go", "rs", "cpp", "c", "yml", "yaml",
+        "json", "toml", "env", "config", "conf", "sql", "sh", "bash",
     ];
 
     for file in scanner.files_with_extensions(&extensions) {
@@ -66,7 +65,8 @@ async fn check_hardcoded_secrets(scanner: &Scanner, config: &Config) -> Result<V
                     // Find line number
                     let line_num = content[..captures.get(0).unwrap().start()]
                         .matches('\n')
-                        .count() + 1;
+                        .count()
+                        + 1;
 
                     findings.push(
                         Finding::new(
@@ -139,12 +139,21 @@ async fn check_env_files(scanner: &Scanner, _config: &Config) -> Result<Vec<Find
     let mut findings = Vec::new();
 
     // Check for .env files (but allow .env.example)
-    let env_patterns = [".env", ".env.local", ".env.production", ".env.development", ".env.test"];
+    let env_patterns = [
+        ".env",
+        ".env.local",
+        ".env.production",
+        ".env.development",
+        ".env.test",
+    ];
 
     for pattern in env_patterns {
         for file in scanner.files_matching_pattern(pattern) {
             // Allow example/template files
-            if file.path.contains(".example") || file.path.contains(".template") || file.path.contains(".sample") {
+            if file.path.contains(".example")
+                || file.path.contains(".template")
+                || file.path.contains(".sample")
+            {
                 continue;
             }
 

@@ -56,7 +56,10 @@ impl ReportRenderer for MarkdownReport {
             output.push_str("## Critical Issues\n\n");
             output.push_str("These issues must be resolved before proceeding.\n\n");
             for finding in critical {
-                output.push_str(&format!("### {} - {}\n\n", finding.rule_id, finding.message));
+                output.push_str(&format!(
+                    "### {} - {}\n\n",
+                    finding.rule_id, finding.message
+                ));
                 if let Some(location) = &finding.location {
                     output.push_str(&format!("**Location:** `{}`\n\n", location));
                 }
@@ -77,7 +80,10 @@ impl ReportRenderer for MarkdownReport {
             output.push_str("## Warnings\n\n");
             output.push_str("These issues should be addressed.\n\n");
             for finding in warnings {
-                output.push_str(&format!("### {} - {}\n\n", finding.rule_id, finding.message));
+                output.push_str(&format!(
+                    "### {} - {}\n\n",
+                    finding.rule_id, finding.message
+                ));
                 if let Some(location) = &finding.location {
                     output.push_str(&format!("**Location:** `{}`\n\n", location));
                 }

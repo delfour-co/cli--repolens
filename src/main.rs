@@ -6,11 +6,11 @@ use anyhow::Result;
 use clap::Parser;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
+mod actions;
 mod cli;
 mod config;
-mod rules;
-mod actions;
 mod providers;
+mod rules;
 mod scanner;
 
 /// Exit codes for the CLI

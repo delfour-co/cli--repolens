@@ -6,7 +6,7 @@ pub mod output;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
-use commands::{InitArgs, PlanArgs, ApplyArgs, ReportArgs};
+use commands::{ApplyArgs, InitArgs, PlanArgs, ReportArgs};
 
 /// RepoLens - Audit and prepare repositories for open source or enterprise standards
 #[derive(Parser, Debug)]

@@ -57,7 +57,9 @@ impl Scanner {
         self.file_cache
             .iter()
             .filter(|f| {
-                extensions.iter().any(|ext| f.path.ends_with(&format!(".{}", ext)))
+                extensions
+                    .iter()
+                    .any(|ext| f.path.ends_with(&format!(".{}", ext)))
             })
             .collect()
     }

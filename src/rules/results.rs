@@ -16,7 +16,7 @@ pub enum Severity {
 
 impl Severity {
     #[allow(dead_code)]
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn from_string(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "critical" | "error" => Some(Self::Critical),
             "warning" | "warn" => Some(Self::Warning),
@@ -141,17 +141,24 @@ impl AuditResults {
 
     /// Count findings by severity
     pub fn count_by_severity(&self, severity: Severity) -> usize {
-        self.findings.iter().filter(|f| f.severity == severity).count()
+        self.findings
+            .iter()
+            .filter(|f| f.severity == severity)
+            .count()
     }
 
     /// Check if there are any critical findings
     pub fn has_critical(&self) -> bool {
-        self.findings.iter().any(|f| f.severity == Severity::Critical)
+        self.findings
+            .iter()
+            .any(|f| f.severity == Severity::Critical)
     }
 
     /// Check if there are any warnings
     pub fn has_warnings(&self) -> bool {
-        self.findings.iter().any(|f| f.severity == Severity::Warning)
+        self.findings
+            .iter()
+            .any(|f| f.severity == Severity::Warning)
     }
 
     /// Get total number of findings
@@ -186,8 +193,18 @@ mod tests {
     fn test_audit_results() {
         let mut results = AuditResults::new("test-repo", "opensource");
 
-        results.add_finding(Finding::new("SEC001", "secrets", Severity::Critical, "Secret found"));
-        results.add_finding(Finding::new("DOC001", "docs", Severity::Warning, "README missing"));
+        results.add_finding(Finding::new(
+            "SEC001",
+            "secrets",
+            Severity::Critical,
+            "Secret found",
+        ));
+        results.add_finding(Finding::new(
+            "DOC001",
+            "docs",
+            Severity::Warning,
+            "README missing",
+        ));
 
         assert_eq!(results.total_count(), 2);
         assert!(results.has_critical());

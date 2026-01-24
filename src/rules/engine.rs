@@ -4,12 +4,8 @@ use anyhow::Result;
 use tracing::{debug, info};
 
 use super::categories::{
-    secrets::SecretsRules,
-    files::FilesRules,
-    docs::DocsRules,
-    security::SecurityRules,
-    workflows::WorkflowsRules,
-    quality::QualityRules,
+    docs::DocsRules, files::FilesRules, quality::QualityRules, secrets::SecretsRules,
+    security::SecurityRules, workflows::WorkflowsRules,
 };
 use super::results::AuditResults;
 use crate::config::Config;

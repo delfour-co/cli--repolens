@@ -117,6 +117,10 @@ security = true
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
+## Development
+
+See [DEVELOPMENT.md](DEVELOPMENT.md) for development setup, architecture, and contribution guidelines.
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.

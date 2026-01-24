@@ -69,7 +69,12 @@ pub fn get_default_branch(root: &Path) -> Option<String> {
     let branches = ["main", "master"];
     for branch in branches {
         let output = Command::new("git")
-            .args(["show-ref", "--verify", "--quiet", &format!("refs/heads/{}", branch)])
+            .args([
+                "show-ref",
+                "--verify",
+                "--quiet",
+                &format!("refs/heads/{}", branch),
+            ])
             .current_dir(root)
             .output()
             .ok()?;
@@ -95,18 +100,27 @@ mod tests {
     #[test]
     fn test_parse_ssh_url() {
         let url = "git@github.com:owner/repo.git";
-        assert_eq!(parse_repo_name_from_url(url), Some("owner/repo".to_string()));
+        assert_eq!(
+            parse_repo_name_from_url(url),
+            Some("owner/repo".to_string())
+        );
     }
 
     #[test]
     fn test_parse_https_url() {
         let url = "https://github.com/owner/repo.git";
-        assert_eq!(parse_repo_name_from_url(url), Some("owner/repo".to_string()));
+        assert_eq!(
+            parse_repo_name_from_url(url),
+            Some("owner/repo".to_string())
+        );
     }
 
     #[test]
     fn test_parse_https_url_without_git() {
         let url = "https://github.com/owner/repo";
-        assert_eq!(parse_repo_name_from_url(url), Some("owner/repo".to_string()));
+        assert_eq!(
+            parse_repo_name_from_url(url),
+            Some("owner/repo".to_string())
+        );
     }
 }

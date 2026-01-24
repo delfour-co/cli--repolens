@@ -55,11 +55,11 @@ async fn check_large_files(scanner: &Scanner) -> Result<Vec<Finding>> {
             )
             .with_location(&file.path)
             .with_description(
-                "Large files can slow down repository operations and increase clone times."
+                "Large files can slow down repository operations and increase clone times.",
             )
             .with_remediation(
-                "Consider using Git LFS (Large File Storage) for binary or large files."
-            )
+                "Consider using Git LFS (Large File Storage) for binary or large files.",
+            ),
         );
     }
 
@@ -79,11 +79,11 @@ async fn check_gitignore(scanner: &Scanner) -> Result<Vec<Finding>> {
                 ".gitignore file is missing",
             )
             .with_description(
-                "A .gitignore file helps prevent accidentally committing unwanted files."
+                "A .gitignore file helps prevent accidentally committing unwanted files.",
             )
             .with_remediation(
-                "Create a .gitignore file with appropriate patterns for your project type."
-            )
+                "Create a .gitignore file with appropriate patterns for your project type.",
+            ),
         );
         return Ok(findings);
     }
@@ -109,8 +109,9 @@ async fn check_gitignore(scanner: &Scanner) -> Result<Vec<Finding>> {
                 )
                 .with_description(format!(
                     "Adding '{}' to .gitignore helps prevent committing {}.",
-                    pattern, description.to_lowercase()
-                ))
+                    pattern,
+                    description.to_lowercase()
+                )),
             );
         }
     }
@@ -133,12 +134,8 @@ async fn check_temp_files(scanner: &Scanner) -> Result<Vec<Finding>> {
                     "Temporary file found in repository",
                 )
                 .with_location(&file.path)
-                .with_description(
-                    "Temporary files should not be committed to version control."
-                )
-                .with_remediation(
-                    "Remove the file and add the pattern to .gitignore."
-                )
+                .with_description("Temporary files should not be committed to version control.")
+                .with_remediation("Remove the file and add the pattern to .gitignore."),
             );
         }
     }

@@ -1,6 +1,6 @@
 //! GitHub repository settings management
 
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use std::process::Command;
 
 use super::plan::GitHubRepoSettings;
@@ -45,13 +45,16 @@ pub async fn update(settings: &GitHubRepoSettings) -> Result<()> {
             .args([
                 "api",
                 &format!("repos/{}/vulnerability-alerts", repo),
-                "--method", "PUT",
+                "--method",
+                "PUT",
             ])
             .output()
             .context("Failed to enable vulnerability alerts")?;
 
         if !output.status.success() {
-            tracing::warn!("Could not enable vulnerability alerts (may require specific permissions)");
+            tracing::warn!(
+                "Could not enable vulnerability alerts (may require specific permissions)"
+            );
         }
     }
 
@@ -61,13 +64,16 @@ pub async fn update(settings: &GitHubRepoSettings) -> Result<()> {
             .args([
                 "api",
                 &format!("repos/{}/automated-security-fixes", repo),
-                "--method", "PUT",
+                "--method",
+                "PUT",
             ])
             .output()
             .context("Failed to enable automated security fixes")?;
 
         if !output.status.success() {
-            tracing::warn!("Could not enable automated security fixes (may require specific permissions)");
+            tracing::warn!(
+                "Could not enable automated security fixes (may require specific permissions)"
+            );
         }
     }
 
@@ -86,7 +92,14 @@ fn is_gh_available() -> bool {
 /// Get repository info (owner/name)
 fn get_repo_info() -> Result<String> {
     let output = Command::new("gh")
-        .args(["repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"])
+        .args([
+            "repo",
+            "view",
+            "--json",
+            "nameWithOwner",
+            "-q",
+            ".nameWithOwner",
+        ])
         .output()
         .context("Failed to get repository info")?;
 

@@ -5,7 +5,9 @@ use std::collections::HashMap;
 use crate::config::Config;
 use crate::rules::results::AuditResults;
 
-use super::plan::{Action, ActionOperation, ActionPlan, BranchProtectionSettings, GitHubRepoSettings};
+use super::plan::{
+    Action, ActionOperation, ActionPlan, BranchProtectionSettings, GitHubRepoSettings,
+};
 
 /// Creates action plans based on audit results and configuration
 pub struct ActionPlanner {
@@ -99,9 +101,11 @@ impl ActionPlanner {
                 "gitignore-update",
                 "gitignore",
                 "Add entries to .gitignore",
-                ActionOperation::UpdateGitignore { entries: entries.clone() },
+                ActionOperation::UpdateGitignore {
+                    entries: entries.clone(),
+                },
             )
-            .with_details(entries)
+            .with_details(entries),
         )
     }
 
@@ -122,7 +126,12 @@ impl ActionPlanner {
             variables.insert("author".to_string(), author.clone());
         }
 
-        let year = self.config.actions.license.year.clone()
+        let year = self
+            .config
+            .actions
+            .license
+            .year
+            .clone()
             .unwrap_or_else(|| chrono::Utc::now().format("%Y").to_string());
         variables.insert("year".to_string(), year);
 
@@ -137,7 +146,7 @@ impl ActionPlanner {
                     variables,
                 },
             )
-            .with_detail(format!("License type: {}", license_type))
+            .with_detail(format!("License type: {}", license_type)),
         )
     }
 
@@ -150,18 +159,16 @@ impl ActionPlanner {
             return None;
         }
 
-        Some(
-            Action::new(
-                "contributing-create",
-                "file",
-                "Create CONTRIBUTING.md",
-                ActionOperation::CreateFile {
-                    path: "CONTRIBUTING.md".to_string(),
-                    template: "CONTRIBUTING.md".to_string(),
-                    variables: HashMap::new(),
-                },
-            )
-        )
+        Some(Action::new(
+            "contributing-create",
+            "file",
+            "Create CONTRIBUTING.md",
+            ActionOperation::CreateFile {
+                path: "CONTRIBUTING.md".to_string(),
+                template: "CONTRIBUTING.md".to_string(),
+                variables: HashMap::new(),
+            },
+        ))
     }
 
     fn plan_code_of_conduct_creation(&self, results: &AuditResults) -> Option<Action> {
@@ -184,7 +191,7 @@ impl ActionPlanner {
                     variables: HashMap::new(),
                 },
             )
-            .with_detail("Using Contributor Covenant template")
+            .with_detail("Using Contributor Covenant template"),
         )
     }
 
@@ -197,18 +204,16 @@ impl ActionPlanner {
             return None;
         }
 
-        Some(
-            Action::new(
-                "security-create",
-                "file",
-                "Create SECURITY.md",
-                ActionOperation::CreateFile {
-                    path: "SECURITY.md".to_string(),
-                    template: "SECURITY.md".to_string(),
-                    variables: HashMap::new(),
-                },
-            )
-        )
+        Some(Action::new(
+            "security-create",
+            "file",
+            "Create SECURITY.md",
+            ActionOperation::CreateFile {
+                path: "SECURITY.md".to_string(),
+                template: "SECURITY.md".to_string(),
+                variables: HashMap::new(),
+            },
+        ))
     }
 
     fn plan_branch_protection(&self) -> Action {

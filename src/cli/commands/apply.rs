@@ -6,12 +6,12 @@ use dialoguer::Confirm;
 use std::path::PathBuf;
 
 use super::ApplyArgs;
+use crate::actions::executor::ActionExecutor;
+use crate::actions::planner::ActionPlanner;
 use crate::config::Config;
+use crate::exit_codes;
 use crate::rules::engine::RulesEngine;
 use crate::scanner::Scanner;
-use crate::actions::planner::ActionPlanner;
-use crate::actions::executor::ActionExecutor;
-use crate::exit_codes;
 
 pub async fn execute(args: ApplyArgs) -> Result<i32> {
     // Load configuration
@@ -22,8 +22,7 @@ pub async fn execute(args: ApplyArgs) -> Result<i32> {
 
     // Run the rules engine to get current state
     let engine = RulesEngine::new(config.clone());
-    let audit_results = engine.run(&scanner).await
-        .context("Failed to run audit")?;
+    let audit_results = engine.run(&scanner).await.context("Failed to run audit")?;
 
     // Generate action plan
     let planner = ActionPlanner::new(config.clone());
@@ -84,7 +83,12 @@ pub async fn execute(args: ApplyArgs) -> Result<i32> {
             println!("  {} {}", "✓".green(), result.action_name);
             success_count += 1;
         } else {
-            println!("  {} {} - {}", "✗".red(), result.action_name, result.error.as_deref().unwrap_or("Unknown error"));
+            println!(
+                "  {} {} - {}",
+                "✗".red(),
+                result.action_name,
+                result.error.as_deref().unwrap_or("Unknown error")
+            );
             error_count += 1;
         }
     }

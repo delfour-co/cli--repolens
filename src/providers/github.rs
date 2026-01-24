@@ -1,6 +1,6 @@
 //! GitHub provider - Interactions with GitHub API via gh CLI
 
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use serde::Deserialize;
 use std::process::Command;
 
@@ -57,9 +57,12 @@ impl GitHubProvider {
     fn get_repo_info() -> Result<(String, String)> {
         let output = Command::new("gh")
             .args([
-                "repo", "view",
-                "--json", "owner,name",
-                "-q", ".owner.login + \"/\" + .name"
+                "repo",
+                "view",
+                "--json",
+                "owner,name",
+                "-q",
+                ".owner.login + \"/\" + .name",
             ])
             .output()
             .context("Failed to get repository info")?;
@@ -88,15 +91,13 @@ impl GitHubProvider {
     #[allow(dead_code)]
     pub fn get_visibility(&self) -> Result<String> {
         let output = Command::new("gh")
-            .args([
-                "repo", "view",
-                "--json", "visibility",
-                "-q", ".visibility"
-            ])
+            .args(["repo", "view", "--json", "visibility", "-q", ".visibility"])
             .output()
             .context("Failed to get repository visibility")?;
 
-        Ok(String::from_utf8_lossy(&output.stdout).trim().to_lowercase())
+        Ok(String::from_utf8_lossy(&output.stdout)
+            .trim()
+            .to_lowercase())
     }
 
     /// Check if the repository is public
@@ -153,8 +154,8 @@ impl GitHubProvider {
             return Ok(None);
         }
 
-        let protection: BranchProtection = serde_json::from_slice(&output.stdout)
-            .context("Failed to parse branch protection")?;
+        let protection: BranchProtection =
+            serde_json::from_slice(&output.stdout).context("Failed to parse branch protection")?;
 
         Ok(Some(protection))
     }

@@ -79,8 +79,8 @@ async fn check_tests(scanner: &Scanner) -> Result<Vec<Finding>> {
                         "No test script defined in package.json",
                     )
                     .with_description(
-                        "A 'test' script in package.json enables running tests with 'npm test'."
-                    )
+                        "A 'test' script in package.json enables running tests with 'npm test'.",
+                    ),
                 );
             }
         }
@@ -124,14 +124,21 @@ async fn check_linting(scanner: &Scanner) -> Result<Vec<Finding>> {
 
     // Detect project type
     let is_js_project = scanner.file_exists("package.json");
-    let is_python_project = scanner.file_exists("pyproject.toml") || scanner.file_exists("requirements.txt");
+    let is_python_project =
+        scanner.file_exists("pyproject.toml") || scanner.file_exists("requirements.txt");
     let is_ruby_project = scanner.file_exists("Gemfile");
     let is_go_project = scanner.file_exists("go.mod");
     let is_rust_project = scanner.file_exists("Cargo.toml");
 
     let has_linting = linting_configs.iter().any(|(f, _)| scanner.file_exists(f));
 
-    if !has_linting && (is_js_project || is_python_project || is_ruby_project || is_go_project || is_rust_project) {
+    if !has_linting
+        && (is_js_project
+            || is_python_project
+            || is_ruby_project
+            || is_go_project
+            || is_rust_project)
+    {
         let suggestion = if is_js_project {
             "ESLint for linting and Prettier for formatting"
         } else if is_python_project {
@@ -152,12 +159,9 @@ async fn check_linting(scanner: &Scanner) -> Result<Vec<Finding>> {
                 "No linting configuration detected",
             )
             .with_description(
-                "Linting tools help maintain consistent code style and catch potential issues."
+                "Linting tools help maintain consistent code style and catch potential issues.",
             )
-            .with_remediation(format!(
-                "Consider adding {} to your project.",
-                suggestion
-            ))
+            .with_remediation(format!("Consider adding {} to your project.", suggestion)),
         );
     }
 

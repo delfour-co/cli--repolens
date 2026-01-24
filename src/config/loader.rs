@@ -6,10 +6,8 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
-use super::{
-    ActionsConfig, RuleConfig, SecretsConfig, TemplatesConfig, UrlConfig,
-};
 use super::presets::Preset;
+use super::{ActionsConfig, RuleConfig, SecretsConfig, TemplatesConfig, UrlConfig};
 
 const CONFIG_FILENAME: &str = ".repolens.toml";
 
@@ -74,17 +72,17 @@ impl Config {
 
     /// Load configuration from a specific file
     pub fn load_from_file(path: &Path) -> Result<Self> {
-        let content = fs::read_to_string(path)
-            .context("Failed to read configuration file")?;
+        let content = fs::read_to_string(path).context("Failed to read configuration file")?;
 
-        toml::from_str(&content)
-            .context("Failed to parse configuration file")
+        toml::from_str(&content).context("Failed to parse configuration file")
     }
 
     /// Create a new configuration from a preset
     pub fn from_preset(preset: Preset) -> Self {
-        let mut config = Self::default();
-        config.preset = preset.name().to_string();
+        let mut config = Self {
+            preset: preset.name().to_string(),
+            ..Default::default()
+        };
 
         // Apply preset-specific defaults
         match preset {
@@ -120,38 +118,34 @@ impl Config {
 
     /// Serialize configuration to TOML
     pub fn to_toml(&self) -> Result<String> {
-        toml::to_string_pretty(self)
-            .context("Failed to serialize configuration")
+        toml::to_string_pretty(self).context("Failed to serialize configuration")
     }
 
     /// Check if a rule is enabled
     pub fn is_rule_enabled(&self, rule_id: &str) -> bool {
-        self.rules
-            .get(rule_id)
-            .map(|r| r.enabled)
-            .unwrap_or(true)
+        self.rules.get(rule_id).map(|r| r.enabled).unwrap_or(true)
     }
 
     /// Get severity override for a rule
     #[allow(dead_code)]
     pub fn get_rule_severity(&self, rule_id: &str) -> Option<&str> {
-        self.rules
-            .get(rule_id)
-            .and_then(|r| r.severity.as_deref())
+        self.rules.get(rule_id).and_then(|r| r.severity.as_deref())
     }
 
     /// Check if a file should be ignored for secrets scanning
     pub fn should_ignore_file(&self, file_path: &str) -> bool {
-        self.secrets.ignore_files.iter().any(|pattern| {
-            glob_match(pattern, file_path)
-        })
+        self.secrets
+            .ignore_files
+            .iter()
+            .any(|pattern| glob_match(pattern, file_path))
     }
 
     /// Check if a pattern should be ignored for secrets scanning
     pub fn should_ignore_pattern(&self, path: &str) -> bool {
-        self.secrets.ignore_patterns.iter().any(|pattern| {
-            glob_match(pattern, path)
-        })
+        self.secrets
+            .ignore_patterns
+            .iter()
+            .any(|pattern| glob_match(pattern, path))
     }
 
     /// Check if a URL is allowed (for enterprise mode)
@@ -161,9 +155,10 @@ impl Config {
             return false;
         }
 
-        self.urls.allowed_internal.iter().any(|pattern| {
-            glob_match(pattern, url)
-        })
+        self.urls
+            .allowed_internal
+            .iter()
+            .any(|pattern| glob_match(pattern, url))
     }
 }
 

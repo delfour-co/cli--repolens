@@ -1,6 +1,6 @@
 //! Template file creation
 
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -26,13 +26,11 @@ pub fn create_file_from_template(
     // Create parent directories if needed
     if let Some(parent) = file_path.parent() {
         if !parent.as_os_str().is_empty() {
-            fs::create_dir_all(parent)
-                .context("Failed to create parent directories")?;
+            fs::create_dir_all(parent).context("Failed to create parent directories")?;
         }
     }
 
-    fs::write(file_path, content)
-        .context(format!("Failed to write file: {}", path))?;
+    fs::write(file_path, content).context(format!("Failed to write file: {}", path))?;
 
     Ok(())
 }
@@ -46,6 +44,9 @@ fn get_template(name: &str) -> Result<String> {
         "CONTRIBUTING.md" => Ok(CONTRIBUTING_TEMPLATE.to_string()),
         "CODE_OF_CONDUCT.md" => Ok(CODE_OF_CONDUCT_TEMPLATE.to_string()),
         "SECURITY.md" => Ok(SECURITY_TEMPLATE.to_string()),
+        "ISSUE_TEMPLATE/bug_report.md" => Ok(BUG_REPORT_TEMPLATE.to_string()),
+        "ISSUE_TEMPLATE/feature_request.md" => Ok(FEATURE_REQUEST_TEMPLATE.to_string()),
+        "PULL_REQUEST_TEMPLATE/pull_request_template.md" => Ok(PULL_REQUEST_TEMPLATE.to_string()),
         _ => bail!("Unknown template: {}", name),
     }
 }
@@ -238,4 +239,102 @@ When using this project:
 - Enable security features where available
 
 Thank you for helping keep this project secure!
+"#;
+
+const BUG_REPORT_TEMPLATE: &str = r#"---
+name: Bug Report
+about: Create a report to help us improve
+title: ''
+labels: bug
+assignees: ''
+---
+
+## Description
+
+A clear and concise description of what the bug is.
+
+## Steps to Reproduce
+
+1. Go to '...'
+2. Click on '....'
+3. Scroll down to '....'
+4. See error
+
+## Expected Behavior
+
+A clear and concise description of what you expected to happen.
+
+## Actual Behavior
+
+A clear and concise description of what actually happened.
+
+## Environment
+
+- OS: [e.g. Ubuntu 22.04, macOS 13.0, Windows 11]
+- Version: [e.g. 0.1.0]
+- Rust version: [e.g. 1.70.0]
+
+## Additional Context
+
+Add any other context about the problem here.
+
+## Screenshots
+
+If applicable, add screenshots to help explain your problem.
+"#;
+
+const FEATURE_REQUEST_TEMPLATE: &str = r#"---
+name: Feature Request
+about: Suggest an idea for this project
+title: ''
+labels: enhancement
+assignees: ''
+---
+
+## Problem Statement
+
+A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+
+## Proposed Solution
+
+A clear and concise description of what you want to happen.
+
+## Alternatives Considered
+
+A clear and concise description of any alternative solutions or features you've considered.
+
+## Use Cases
+
+Describe the use cases for this feature:
+
+1. Use case 1
+2. Use case 2
+3. Use case 3
+
+## Additional Context
+
+Add any other context, mockups, or examples about the feature request here.
+
+## Implementation Notes (Optional)
+
+If you have ideas about how this could be implemented, please share them here.
+"#;
+
+const PULL_REQUEST_TEMPLATE: &str = r#"## Description
+
+Brief description of changes.
+
+## Type of Change
+
+- [ ] Bug fix
+- [ ] New feature
+- [ ] Documentation update
+- [ ] Refactoring
+
+## Checklist
+
+- [ ] Code compiles without errors
+- [ ] Tests pass
+- [ ] Code follows project style guidelines
+- [ ] Documentation updated if needed
 "#;

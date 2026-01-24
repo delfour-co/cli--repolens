@@ -3,11 +3,11 @@
 //! This crate provides the core functionality for auditing repositories
 //! and preparing them for open source or enterprise standards.
 
+pub mod actions;
 pub mod cli;
 pub mod config;
-pub mod rules;
-pub mod actions;
 pub mod providers;
+pub mod rules;
 pub mod scanner;
 
 /// Exit codes for the CLI

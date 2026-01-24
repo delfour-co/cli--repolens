@@ -123,7 +123,8 @@ async fn check_dependencies(scanner: &Scanner) -> Result<Vec<Finding>> {
 
     // Detect project type
     let is_node = scanner.file_exists("package.json");
-    let is_python = scanner.file_exists("pyproject.toml") || scanner.file_exists("requirements.txt");
+    let is_python =
+        scanner.file_exists("pyproject.toml") || scanner.file_exists("requirements.txt");
     let is_ruby = scanner.file_exists("Gemfile");
     let is_rust = scanner.file_exists("Cargo.toml");
 

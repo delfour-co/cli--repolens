@@ -10,8 +10,7 @@ pub fn update_gitignore_at(root: &Path, entries: &[String]) -> Result<()> {
 
     // Read existing content or create empty
     let mut content = if gitignore_path.exists() {
-        fs::read_to_string(&gitignore_path)
-            .context("Failed to read .gitignore")?
+        fs::read_to_string(&gitignore_path).context("Failed to read .gitignore")?
     } else {
         String::new()
     };
@@ -34,7 +33,9 @@ pub fn update_gitignore_at(root: &Path, entries: &[String]) -> Result<()> {
         let exists = content.lines().any(|line| {
             let line = line.trim();
             let line_clean = line.trim_end_matches('/');
-            entry_patterns.iter().any(|p| line == *p || line_clean == entry_clean)
+            entry_patterns
+                .iter()
+                .any(|p| line == *p || line_clean == entry_clean)
         });
 
         if !exists {
@@ -63,8 +64,7 @@ pub fn update_gitignore_at(root: &Path, entries: &[String]) -> Result<()> {
     }
 
     // Write back
-    fs::write(&gitignore_path, content)
-        .context("Failed to write .gitignore")?;
+    fs::write(&gitignore_path, content).context("Failed to write .gitignore")?;
 
     Ok(())
 }
@@ -96,7 +96,11 @@ mod tests {
 
         fs::write(dir.path().join(".gitignore"), "node_modules/\n").unwrap();
 
-        update_gitignore_at(dir.path(), &[".env".to_string(), "node_modules".to_string()]).unwrap();
+        update_gitignore_at(
+            dir.path(),
+            &[".env".to_string(), "node_modules".to_string()],
+        )
+        .unwrap();
 
         let content = fs::read_to_string(dir.path().join(".gitignore")).unwrap();
         assert!(content.contains("node_modules"));

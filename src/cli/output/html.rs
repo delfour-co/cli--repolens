@@ -79,7 +79,10 @@ impl ReportRenderer for HtmlReport {
                 finding.rule_id,
                 finding.message,
                 finding.location.as_ref().map_or(String::new(), |l| {
-                    format!(r#"<div class="finding-location">Location: <code>{}</code></div>"#, l)
+                    format!(
+                        r#"<div class="finding-location">Location: <code>{}</code></div>"#,
+                        l
+                    )
                 })
             ));
         }
@@ -95,8 +98,7 @@ impl ReportRenderer for HtmlReport {
                         </div>
                         <div class="finding-message">{}</div>
                     </div>"#,
-                    finding.rule_id,
-                    finding.message
+                    finding.rule_id, finding.message
                 ));
             }
         }

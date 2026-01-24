@@ -1,6 +1,6 @@
 //! Branch protection configuration via GitHub API
 
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use std::process::Command;
 
 use super::plan::BranchProtectionSettings;
@@ -36,15 +36,30 @@ pub async fn configure(branch: &str, settings: &BranchProtectionSettings) -> Res
         .args([
             "api",
             &format!("repos/{}/branches/{}/protection", repo, branch),
-            "--method", "PUT",
-            "--field", &format!("required_status_checks={}", required_status_checks),
-            "--field", &format!("enforce_admins={}", settings.enforce_admins),
-            "--field", &format!("required_pull_request_reviews={}", required_pr_reviews),
-            "--field", "restrictions=null",
-            "--field", &format!("required_linear_history={}", settings.require_linear_history),
-            "--field", &format!("allow_force_pushes={}", !settings.block_force_push),
-            "--field", &format!("allow_deletions={}", !settings.block_deletions),
-            "--field", &format!("required_conversation_resolution={}", settings.require_conversation_resolution),
+            "--method",
+            "PUT",
+            "--field",
+            &format!("required_status_checks={}", required_status_checks),
+            "--field",
+            &format!("enforce_admins={}", settings.enforce_admins),
+            "--field",
+            &format!("required_pull_request_reviews={}", required_pr_reviews),
+            "--field",
+            "restrictions=null",
+            "--field",
+            &format!(
+                "required_linear_history={}",
+                settings.require_linear_history
+            ),
+            "--field",
+            &format!("allow_force_pushes={}", !settings.block_force_push),
+            "--field",
+            &format!("allow_deletions={}", !settings.block_deletions),
+            "--field",
+            &format!(
+                "required_conversation_resolution={}",
+                settings.require_conversation_resolution
+            ),
         ])
         .output()
         .context("Failed to execute gh command")?;
@@ -68,8 +83,12 @@ pub async fn configure(branch: &str, settings: &BranchProtectionSettings) -> Res
         let output = Command::new("gh")
             .args([
                 "api",
-                &format!("repos/{}/branches/{}/protection/required_signatures", repo, branch),
-                "--method", "POST",
+                &format!(
+                    "repos/{}/branches/{}/protection/required_signatures",
+                    repo, branch
+                ),
+                "--method",
+                "POST",
             ])
             .output()
             .context("Failed to enable signed commits requirement")?;
@@ -95,7 +114,14 @@ fn is_gh_available() -> bool {
 /// Get repository info (owner/name)
 fn get_repo_info() -> Result<String> {
     let output = Command::new("gh")
-        .args(["repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"])
+        .args([
+            "repo",
+            "view",
+            "--json",
+            "nameWithOwner",
+            "-q",
+            ".nameWithOwner",
+        ])
         .output()
         .context("Failed to get repository info")?;
 

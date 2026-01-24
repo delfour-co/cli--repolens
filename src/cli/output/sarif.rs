@@ -4,8 +4,8 @@ use anyhow::Result;
 use serde::Serialize;
 
 use super::OutputRenderer;
-use crate::rules::results::{AuditResults, Finding, Severity};
 use crate::actions::plan::ActionPlan;
+use crate::rules::results::{AuditResults, Finding, Severity};
 
 pub struct SarifOutput;
 

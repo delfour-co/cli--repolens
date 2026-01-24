@@ -49,8 +49,7 @@ pub async fn execute(args: InitArgs) -> Result<i32> {
 
     // Write configuration file
     let config_content = config.to_toml()?;
-    fs::write(config_path, &config_content)
-        .context("Failed to write configuration file")?;
+    fs::write(config_path, &config_content).context("Failed to write configuration file")?;
 
     println!(
         "{} Created {} with preset '{}'",
@@ -68,8 +67,11 @@ pub async fn execute(args: InitArgs) -> Result<i32> {
 }
 
 fn select_preset() -> Result<Preset> {
-    let presets = vec![
-        ("opensource", "Open Source - Prepare repository for public release"),
+    let presets = [
+        (
+            "opensource",
+            "Open Source - Prepare repository for public release",
+        ),
         ("enterprise", "Enterprise - Internal company standards"),
         ("strict", "Strict - Maximum security and compliance checks"),
     ];

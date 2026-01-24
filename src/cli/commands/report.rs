@@ -5,11 +5,11 @@ use colored::Colorize;
 use std::path::PathBuf;
 
 use super::{ReportArgs, ReportFormat};
-use crate::cli::output::{HtmlReport, MarkdownReport, JsonOutput, ReportRenderer};
+use crate::cli::output::{HtmlReport, JsonOutput, MarkdownReport, ReportRenderer};
 use crate::config::Config;
+use crate::exit_codes;
 use crate::rules::engine::RulesEngine;
 use crate::scanner::Scanner;
-use crate::exit_codes;
 
 pub async fn execute(args: ReportArgs) -> Result<i32> {
     // Load configuration
@@ -20,8 +20,7 @@ pub async fn execute(args: ReportArgs) -> Result<i32> {
 
     // Run the rules engine
     let engine = RulesEngine::new(config);
-    let audit_results = engine.run(&scanner).await
-        .context("Failed to run audit")?;
+    let audit_results = engine.run(&scanner).await.context("Failed to run audit")?;
 
     // Generate report
     let renderer: Box<dyn ReportRenderer> = match args.format {
@@ -42,8 +41,7 @@ pub async fn execute(args: ReportArgs) -> Result<i32> {
         PathBuf::from(format!("repolens-report.{extension}"))
     });
 
-    std::fs::write(&output_path, &report)
-        .context("Failed to write report file")?;
+    std::fs::write(&output_path, &report).context("Failed to write report file")?;
 
     println!(
         "{} Report written to: {}",

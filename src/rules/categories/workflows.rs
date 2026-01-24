@@ -79,12 +79,10 @@ async fn check_workflow_secrets(scanner: &Scanner) -> Result<Vec<Finding>> {
                             format!("Potential {} in workflow", description),
                         )
                         .with_location(format!("{}:{}", file.path, line_num))
-                        .with_description(
-                            "Secrets should never be hardcoded in workflow files."
-                        )
+                        .with_description("Secrets should never be hardcoded in workflow files.")
                         .with_remediation(
-                            "Use GitHub Secrets (secrets.SECRET_NAME) instead of hardcoded values."
-                        )
+                            "Use GitHub Secrets (secrets.SECRET_NAME) instead of hardcoded values.",
+                        ),
                     );
                 }
             }

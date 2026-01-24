@@ -4,8 +4,8 @@ use anyhow::Result;
 use serde::Serialize;
 
 use super::{OutputRenderer, ReportRenderer};
-use crate::rules::results::AuditResults;
 use crate::actions::plan::ActionPlan;
+use crate::rules::results::AuditResults;
 
 pub struct JsonOutput;
 
@@ -52,12 +52,14 @@ impl OutputRenderer for JsonOutput {
             repository: &results.repository_name,
             preset: &results.preset,
             audit: AuditSummary {
-                critical_count: results.count_by_severity(crate::rules::results::Severity::Critical),
+                critical_count: results
+                    .count_by_severity(crate::rules::results::Severity::Critical),
                 warning_count: results.count_by_severity(crate::rules::results::Severity::Warning),
                 info_count: results.count_by_severity(crate::rules::results::Severity::Info),
                 findings: results.findings(),
             },
-            actions: plan.actions()
+            actions: plan
+                .actions()
                 .iter()
                 .map(|a| ActionSummary {
                     category: a.category(),

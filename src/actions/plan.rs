@@ -76,9 +76,7 @@ impl Action {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ActionOperation {
     /// Update .gitignore file
-    UpdateGitignore {
-        entries: Vec<String>,
-    },
+    UpdateGitignore { entries: Vec<String> },
 
     /// Create a file from template
     CreateFile {
@@ -94,9 +92,7 @@ pub enum ActionOperation {
     },
 
     /// Update GitHub repository settings
-    UpdateGitHubSettings {
-        settings: GitHubRepoSettings,
-    },
+    UpdateGitHubSettings { settings: GitHubRepoSettings },
 }
 
 /// Branch protection settings
@@ -174,12 +170,14 @@ impl ActionPlan {
 
     /// Filter to only include specific action categories
     pub fn filter_only(&mut self, categories: &[String]) {
-        self.actions.retain(|a| categories.contains(&a.category.to_string()));
+        self.actions
+            .retain(|a| categories.contains(&a.category.to_string()));
     }
 
     /// Filter to skip specific action categories
     pub fn filter_skip(&mut self, categories: &[String]) {
-        self.actions.retain(|a| !categories.contains(&a.category.to_string()));
+        self.actions
+            .retain(|a| !categories.contains(&a.category.to_string()));
     }
 }
 

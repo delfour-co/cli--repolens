@@ -1,9 +1,9 @@
 //! Actions module - Planned changes and execution
 
+mod branch_protection;
+pub mod executor;
+mod github_settings;
+mod gitignore;
 pub mod plan;
 pub mod planner;
-pub mod executor;
-mod gitignore;
 mod templates;
-mod branch_protection;
-mod github_settings;

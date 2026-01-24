@@ -4,12 +4,12 @@ use anyhow::{Context, Result};
 use std::path::PathBuf;
 
 use super::{OutputFormat, PlanArgs};
-use crate::cli::output::{TerminalOutput, JsonOutput, SarifOutput, OutputRenderer};
+use crate::actions::planner::ActionPlanner;
+use crate::cli::output::{JsonOutput, OutputRenderer, SarifOutput, TerminalOutput};
 use crate::config::Config;
+use crate::exit_codes;
 use crate::rules::engine::RulesEngine;
 use crate::scanner::Scanner;
-use crate::actions::planner::ActionPlanner;
-use crate::exit_codes;
 
 pub async fn execute(args: PlanArgs) -> Result<i32> {
     // Load configuration
@@ -30,8 +30,7 @@ pub async fn execute(args: PlanArgs) -> Result<i32> {
     }
 
     // Execute audit
-    let audit_results = engine.run(&scanner).await
-        .context("Failed to run audit")?;
+    let audit_results = engine.run(&scanner).await.context("Failed to run audit")?;
 
     // Generate action plan
     let planner = ActionPlanner::new(config);
@@ -48,8 +47,7 @@ pub async fn execute(args: PlanArgs) -> Result<i32> {
 
     // Write output
     if let Some(output_path) = args.output {
-        std::fs::write(&output_path, &rendered)
-            .context("Failed to write output file")?;
+        std::fs::write(&output_path, &rendered).context("Failed to write output file")?;
         eprintln!("Plan written to: {}", output_path.display());
     } else {
         println!("{rendered}");

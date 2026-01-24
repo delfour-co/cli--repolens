@@ -98,14 +98,12 @@ async fn check_readme(scanner: &Scanner) -> Result<Vec<Finding>> {
 
         for (keyword, description) in sections {
             if !content.to_lowercase().contains(keyword) {
-                findings.push(
-                    Finding::new(
-                        "DOC003",
-                        "docs",
-                        Severity::Info,
-                        format!("README missing section: {}", description),
-                    )
-                );
+                findings.push(Finding::new(
+                    "DOC003",
+                    "docs",
+                    Severity::Info,
+                    format!("README missing section: {}", description),
+                ));
             }
         }
     }
@@ -173,7 +171,11 @@ async fn check_contributing(scanner: &Scanner) -> Result<Vec<Finding>> {
 async fn check_code_of_conduct(scanner: &Scanner) -> Result<Vec<Finding>> {
     let mut findings = Vec::new();
 
-    let coc_files = ["CODE_OF_CONDUCT.md", "CODE_OF_CONDUCT", ".github/CODE_OF_CONDUCT.md"];
+    let coc_files = [
+        "CODE_OF_CONDUCT.md",
+        "CODE_OF_CONDUCT",
+        ".github/CODE_OF_CONDUCT.md",
+    ];
     let has_coc = coc_files.iter().any(|f| scanner.file_exists(f));
 
     if !has_coc {

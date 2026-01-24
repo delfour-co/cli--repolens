@@ -6,7 +6,7 @@ use tracing::{debug, info};
 use crate::config::Config;
 
 use super::plan::{Action, ActionOperation, ActionPlan};
-use super::{gitignore, templates, branch_protection, github_settings};
+use super::{branch_protection, github_settings, gitignore, templates};
 
 /// Result of executing a single action
 #[derive(Debug)]
@@ -54,7 +54,11 @@ impl ActionExecutor {
                 gitignore::update_gitignore(entries)?;
             }
 
-            ActionOperation::CreateFile { path, template, variables } => {
+            ActionOperation::CreateFile {
+                path,
+                template,
+                variables,
+            } => {
                 debug!("Creating file {} from template {}", path, template);
                 templates::create_file_from_template(path, template, variables)?;
             }
