@@ -8,11 +8,44 @@ use std::path::Path;
 
 use super::InitArgs;
 use crate::config::{Config, Preset};
+use crate::utils::prerequisites::{
+    display_error_summary, display_report, display_warnings, run_all_checks, CheckOptions,
+};
 
 const CONFIG_FILENAME: &str = ".repolens.toml";
 
 pub async fn execute(args: InitArgs) -> Result<i32> {
+    let root = std::env::current_dir().context("Failed to get current directory")?;
     let config_path = Path::new(CONFIG_FILENAME);
+
+    // Run prerequisite checks unless skipped
+    if !args.skip_checks {
+        let options = CheckOptions::default();
+        let report = run_all_checks(&root, &options);
+        display_report(&report, false);
+
+        if !report.all_required_passed() {
+            display_error_summary(&report);
+
+            if args.non_interactive {
+                return Ok(crate::exit_codes::ERROR);
+            }
+
+            // Ask if user wants to continue anyway
+            let continue_anyway = Confirm::new()
+                .with_prompt("Continue anyway?")
+                .default(false)
+                .interact()?;
+
+            if !continue_anyway {
+                return Ok(crate::exit_codes::ERROR);
+            }
+
+            println!();
+        } else if report.has_warnings() {
+            display_warnings(&report);
+        }
+    }
 
     // Check if config already exists
     if config_path.exists() && !args.force {

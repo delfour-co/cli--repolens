@@ -22,6 +22,10 @@ pub struct InitArgs {
     /// Skip interactive prompts
     #[arg(long)]
     pub non_interactive: bool,
+
+    /// Skip prerequisite checks (git, gh, etc.)
+    #[arg(long)]
+    pub skip_checks: bool,
 }
 
 /// Arguments for the plan command

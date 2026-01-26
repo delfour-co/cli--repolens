@@ -8,8 +8,14 @@ Ce document explique comment développer, tester et contribuer au projet RepoLen
   ```bash
   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
   ```
-- **Git** : Pour la gestion de version
-- **GitHub CLI** (`gh`) : Optionnel, pour tester les fonctionnalités GitHub (installation via `gh auth login`)
+- **Git** : Pour la gestion de version (requis)
+- **GitHub CLI** (`gh`) : Requis pour les fonctionnalités GitHub
+  ```bash
+  # Installation : https://cli.github.com/
+  gh auth login
+  ```
+
+> **Note** : La commande `repolens init` vérifie automatiquement ces prérequis. Utilisez `--skip-checks` pour ignorer cette vérification pendant le développement.
 
 ## Installation et Setup
 
@@ -50,9 +56,11 @@ src/
 │   └── templates.rs     # Génération de fichiers à partir de templates
 ├── providers/           # Intégration avec les APIs externes
 │   └── github.rs        # Provider GitHub (via gh CLI)
-└── scanner/             # Scan du système de fichiers et Git
-    ├── filesystem.rs    # Scan du système de fichiers
-    └── git.rs           # Informations Git
+├── scanner/             # Scan du système de fichiers et Git
+│   ├── filesystem.rs    # Scan du système de fichiers
+│   └── git.rs           # Informations Git
+└── utils/               # Utilitaires partagés
+    └── prerequisites.rs # Vérification des prérequis (git, gh, etc.)
 ```
 
 ## Commandes de Développement

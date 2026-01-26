@@ -4,6 +4,7 @@ use anyhow::{bail, Context, Result};
 use std::process::Command;
 
 use super::plan::BranchProtectionSettings;
+use crate::utils::prerequisites::{get_repo_info, is_gh_available};
 
 /// Configure branch protection for a branch
 pub async fn configure(branch: &str, settings: &BranchProtectionSettings) -> Result<()> {
@@ -102,32 +103,3 @@ pub async fn configure(branch: &str, settings: &BranchProtectionSettings) -> Res
     Ok(())
 }
 
-/// Check if gh CLI is available and authenticated
-fn is_gh_available() -> bool {
-    Command::new("gh")
-        .args(["auth", "status"])
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
-}
-
-/// Get repository info (owner/name)
-fn get_repo_info() -> Result<String> {
-    let output = Command::new("gh")
-        .args([
-            "repo",
-            "view",
-            "--json",
-            "nameWithOwner",
-            "-q",
-            ".nameWithOwner",
-        ])
-        .output()
-        .context("Failed to get repository info")?;
-
-    if !output.status.success() {
-        bail!("Failed to get repository info. Make sure you're in a git repository.");
-    }
-
-    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
-}

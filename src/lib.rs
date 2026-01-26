@@ -9,6 +9,7 @@ pub mod config;
 pub mod providers;
 pub mod rules;
 pub mod scanner;
+pub mod utils;
 
 /// Exit codes for the CLI
 pub mod exit_codes {

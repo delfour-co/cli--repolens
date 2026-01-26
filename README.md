@@ -47,6 +47,38 @@ Nightly builds are available for testing. See the [Releases page](https://github
 
 ⚠️ **Warning**: Nightly builds may be unstable. Use at your own risk.
 
+## Prerequisites
+
+RepoLens requires the following tools to be installed and configured:
+
+| Tool | Required | Description |
+|------|----------|-------------|
+| Git | Yes | Must be installed and the directory must be a git repository |
+| GitHub CLI (gh) | Yes | Must be installed and authenticated (`gh auth login`) |
+
+When running `repolens init`, these prerequisites are automatically verified:
+
+```
+Checking prerequisites...
+
+  ✓ Git installed
+  ✓ Git repository
+  ✓ GitHub CLI installed
+  ✓ GitHub CLI authenticated
+  ✓ Remote origin configured
+  ✓ Remote is GitHub
+```
+
+If a required prerequisite fails, you'll see an error with a suggested fix:
+
+```
+  ✗ GitHub CLI installed
+    GitHub CLI (gh) is not installed
+    Fix: Install gh: https://cli.github.com/
+```
+
+Use `--skip-checks` to bypass prerequisite verification (not recommended).
+
 ## Usage
 
 ### Initialize Configuration
@@ -59,6 +91,9 @@ repolens init
 repolens init --preset opensource
 repolens init --preset enterprise
 repolens init --preset strict
+
+# Skip prerequisite checks (not recommended)
+repolens init --skip-checks
 ```
 
 ### Run Audit

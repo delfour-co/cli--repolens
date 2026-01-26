@@ -24,6 +24,7 @@ async fn test_init_command_creates_config() {
             "opensource",
             "--non-interactive",
             "--force",
+            "--skip-checks",
         ])
         .assert()
         .success();
@@ -49,7 +50,7 @@ async fn test_init_command_with_different_presets() {
 
         get_cmd()
             .current_dir(temp_dir.path())
-            .args(&["init", "--preset", preset, "--non-interactive", "--force"])
+            .args(&["init", "--preset", preset, "--non-interactive", "--force", "--skip-checks"])
             .assert()
             .success();
 
@@ -75,6 +76,7 @@ async fn test_init_command_refuses_overwrite_without_force() {
             "opensource",
             "--non-interactive",
             "--force",
+            "--skip-checks",
         ])
         .assert()
         .success();
@@ -82,7 +84,7 @@ async fn test_init_command_refuses_overwrite_without_force() {
     // Try to create again without force
     get_cmd()
         .current_dir(temp_dir.path())
-        .args(&["init", "--preset", "enterprise", "--non-interactive"])
+        .args(&["init", "--preset", "enterprise", "--non-interactive", "--skip-checks"])
         .assert()
         .failure()
         .stderr(predicate::str::contains("already exists"));
@@ -101,6 +103,7 @@ async fn test_plan_command_runs_successfully() {
             "opensource",
             "--non-interactive",
             "--force",
+            "--skip-checks",
         ])
         .assert()
         .success();
@@ -127,6 +130,7 @@ async fn test_plan_command_with_json_output() {
             "opensource",
             "--non-interactive",
             "--force",
+            "--skip-checks",
         ])
         .assert()
         .success();
@@ -160,6 +164,7 @@ async fn test_plan_command_detects_missing_readme() {
             "opensource",
             "--non-interactive",
             "--force",
+            "--skip-checks",
         ])
         .assert()
         .success();
@@ -192,6 +197,7 @@ async fn test_template_creation() {
             "opensource",
             "--non-interactive",
             "--force",
+            "--skip-checks",
         ])
         .assert()
         .success();
