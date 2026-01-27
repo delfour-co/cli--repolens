@@ -7,7 +7,7 @@
 //! - CODE_OF_CONDUCT files
 //! - SECURITY policy files
 
-use anyhow::Result;
+use crate::error::RepoLensError;
 
 use crate::config::Config;
 use crate::rules::engine::RuleCategory;
@@ -34,7 +34,7 @@ impl RuleCategory for DocsRules {
     /// # Returns
     ///
     /// A vector of findings for documentation issues
-    async fn run(&self, scanner: &Scanner, config: &Config) -> Result<Vec<Finding>> {
+    async fn run(&self, scanner: &Scanner, config: &Config) -> Result<Vec<Finding>, RepoLensError> {
         let mut findings = Vec::new();
 
         // Check README
@@ -78,7 +78,7 @@ impl RuleCategory for DocsRules {
 /// # Returns
 ///
 /// A vector of findings for README issues
-async fn check_readme(scanner: &Scanner) -> Result<Vec<Finding>> {
+async fn check_readme(scanner: &Scanner) -> Result<Vec<Finding>, RepoLensError> {
     let mut findings = Vec::new();
 
     let readme_files = ["README.md", "README", "README.txt", "README.rst"];
@@ -154,7 +154,7 @@ async fn check_readme(scanner: &Scanner) -> Result<Vec<Finding>> {
 /// # Returns
 ///
 /// A vector of findings for LICENSE issues
-async fn check_license(scanner: &Scanner, config: &Config) -> Result<Vec<Finding>> {
+async fn check_license(scanner: &Scanner, config: &Config) -> Result<Vec<Finding>, RepoLensError> {
     let mut findings = Vec::new();
 
     let license_files = ["LICENSE", "LICENSE.md", "LICENSE.txt", "COPYING"];
@@ -196,7 +196,7 @@ async fn check_license(scanner: &Scanner, config: &Config) -> Result<Vec<Finding
 /// # Returns
 ///
 /// A vector of findings for CONTRIBUTING issues
-async fn check_contributing(scanner: &Scanner) -> Result<Vec<Finding>> {
+async fn check_contributing(scanner: &Scanner) -> Result<Vec<Finding>, RepoLensError> {
     let mut findings = Vec::new();
 
     let contributing_files = ["CONTRIBUTING.md", "CONTRIBUTING", ".github/CONTRIBUTING.md"];
@@ -233,7 +233,7 @@ async fn check_contributing(scanner: &Scanner) -> Result<Vec<Finding>> {
 /// # Returns
 ///
 /// A vector of findings for CODE_OF_CONDUCT issues
-async fn check_code_of_conduct(scanner: &Scanner) -> Result<Vec<Finding>> {
+async fn check_code_of_conduct(scanner: &Scanner) -> Result<Vec<Finding>, RepoLensError> {
     let mut findings = Vec::new();
 
     let coc_files = [
@@ -274,7 +274,7 @@ async fn check_code_of_conduct(scanner: &Scanner) -> Result<Vec<Finding>> {
 /// # Returns
 ///
 /// A vector of findings for SECURITY policy issues
-async fn check_security(scanner: &Scanner) -> Result<Vec<Finding>> {
+async fn check_security(scanner: &Scanner) -> Result<Vec<Finding>, RepoLensError> {
     let mut findings = Vec::new();
 
     let security_files = ["SECURITY.md", ".github/SECURITY.md"];

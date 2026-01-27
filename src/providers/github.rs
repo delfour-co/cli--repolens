@@ -1,6 +1,6 @@
 //! GitHub provider - Interactions with GitHub API via gh CLI
 
-use anyhow::{bail, Context, Result};
+use crate::error::{ProviderError, RepoLensError};
 use serde::Deserialize;
 use std::process::Command;
 
@@ -34,7 +34,7 @@ struct RepoOwner {
 impl GitHubProvider {
     /// Create a new GitHub provider for the current repository
     #[allow(dead_code)]
-    pub fn new() -> Result<Self> {
+    pub fn new() -> Result<Self, RepoLensError> {
         let (owner, name) = Self::get_repo_info()?;
         Ok(Self {
             repo_owner: owner,
@@ -54,7 +54,7 @@ impl GitHubProvider {
 
     /// Get repository owner and name
     #[allow(dead_code)]
-    fn get_repo_info() -> Result<(String, String)> {
+    fn get_repo_info() -> Result<(String, String), RepoLensError> {
         let output = Command::new("gh")
             .args([
                 "repo",
@@ -65,17 +65,23 @@ impl GitHubProvider {
                 ".owner.login + \"/\" + .name",
             ])
             .output()
-            .context("Failed to get repository info")?;
+            .map_err(|_| {
+                RepoLensError::Provider(ProviderError::CommandFailed {
+                    command: "gh repo view".to_string(),
+                })
+            })?;
 
         if !output.status.success() {
-            bail!("Not in a GitHub repository or not authenticated");
+            return Err(RepoLensError::Provider(ProviderError::NotAuthenticated));
         }
 
         let full_name = String::from_utf8_lossy(&output.stdout).trim().to_string();
         let parts: Vec<&str> = full_name.split('/').collect();
 
         if parts.len() != 2 {
-            bail!("Invalid repository name format");
+            return Err(RepoLensError::Provider(ProviderError::InvalidRepoName {
+                name: full_name,
+            }));
         }
 
         Ok((parts[0].to_string(), parts[1].to_string()))
@@ -89,11 +95,15 @@ impl GitHubProvider {
 
     /// Get repository visibility
     #[allow(dead_code)]
-    pub fn get_visibility(&self) -> Result<String> {
+    pub fn get_visibility(&self) -> Result<String, RepoLensError> {
         let output = Command::new("gh")
             .args(["repo", "view", "--json", "visibility", "-q", ".visibility"])
             .output()
-            .context("Failed to get repository visibility")?;
+            .map_err(|_| {
+                RepoLensError::Provider(ProviderError::CommandFailed {
+                    command: "gh repo view".to_string(),
+                })
+            })?;
 
         Ok(String::from_utf8_lossy(&output.stdout)
             .trim()
@@ -102,17 +112,21 @@ impl GitHubProvider {
 
     /// Check if the repository is public
     #[allow(dead_code)]
-    pub fn is_public(&self) -> Result<bool> {
+    pub fn is_public(&self) -> Result<bool, RepoLensError> {
         Ok(self.get_visibility()? == "public")
     }
 
     /// Get list of repository secrets (names only)
     #[allow(dead_code)]
-    pub fn list_secrets(&self) -> Result<Vec<String>> {
+    pub fn list_secrets(&self) -> Result<Vec<String>, RepoLensError> {
         let output = Command::new("gh")
             .args(["secret", "list", "--json", "name", "-q", ".[].name"])
             .output()
-            .context("Failed to list secrets")?;
+            .map_err(|_| {
+                RepoLensError::Provider(ProviderError::CommandFailed {
+                    command: "gh secret list".to_string(),
+                })
+            })?;
 
         if !output.status.success() {
             return Ok(Vec::new());
@@ -124,11 +138,15 @@ impl GitHubProvider {
 
     /// Get list of repository variables
     #[allow(dead_code)]
-    pub fn list_variables(&self) -> Result<Vec<String>> {
+    pub fn list_variables(&self) -> Result<Vec<String>, RepoLensError> {
         let output = Command::new("gh")
             .args(["variable", "list", "--json", "name", "-q", ".[].name"])
             .output()
-            .context("Failed to list variables")?;
+            .map_err(|_| {
+                RepoLensError::Provider(ProviderError::CommandFailed {
+                    command: "gh variable list".to_string(),
+                })
+            })?;
 
         if !output.status.success() {
             return Ok(Vec::new());
@@ -140,22 +158,32 @@ impl GitHubProvider {
 
     /// Get branch protection status
     #[allow(dead_code)]
-    pub fn get_branch_protection(&self, branch: &str) -> Result<Option<BranchProtection>> {
+    pub fn get_branch_protection(
+        &self,
+        branch: &str,
+    ) -> Result<Option<BranchProtection>, RepoLensError> {
         let output = Command::new("gh")
             .args([
                 "api",
                 &format!("repos/{}/branches/{}/protection", self.full_name(), branch),
             ])
             .output()
-            .context("Failed to get branch protection")?;
+            .map_err(|_| {
+                RepoLensError::Provider(ProviderError::CommandFailed {
+                    command: format!(
+                        "gh api repos/{}/branches/{}/protection",
+                        self.full_name(),
+                        branch
+                    ),
+                })
+            })?;
 
         if !output.status.success() {
             // 404 means no protection
             return Ok(None);
         }
 
-        let protection: BranchProtection =
-            serde_json::from_slice(&output.stdout).context("Failed to parse branch protection")?;
+        let protection: BranchProtection = serde_json::from_slice(&output.stdout)?;
 
         Ok(Some(protection))
     }

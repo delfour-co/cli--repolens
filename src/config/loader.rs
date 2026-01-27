@@ -1,10 +1,11 @@
 //! Configuration loader
 
-use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
+
+use crate::error::{ConfigError, RepoLensError};
 
 use super::presets::Preset;
 use super::{ActionsConfig, RuleConfig, SecretsConfig, TemplatesConfig, UrlConfig};
@@ -60,7 +61,7 @@ impl Default for Config {
 
 impl Config {
     /// Load configuration from file or return default
-    pub fn load_or_default() -> Result<Self> {
+    pub fn load_or_default() -> Result<Self, RepoLensError> {
         let config_path = Path::new(CONFIG_FILENAME);
 
         if config_path.exists() {
@@ -71,10 +72,15 @@ impl Config {
     }
 
     /// Load configuration from a specific file
-    pub fn load_from_file(path: &Path) -> Result<Self> {
-        let content = fs::read_to_string(path).context("Failed to read configuration file")?;
+    pub fn load_from_file(path: &Path) -> Result<Self, RepoLensError> {
+        let content = fs::read_to_string(path).map_err(|e| {
+            RepoLensError::Config(ConfigError::FileRead {
+                path: path.display().to_string(),
+                source: e,
+            })
+        })?;
 
-        toml::from_str(&content).context("Failed to parse configuration file")
+        toml::from_str(&content).map_err(Into::into)
     }
 
     /// Create a new configuration from a preset
@@ -117,8 +123,8 @@ impl Config {
     }
 
     /// Serialize configuration to TOML
-    pub fn to_toml(&self) -> Result<String> {
-        toml::to_string_pretty(self).context("Failed to serialize configuration")
+    pub fn to_toml(&self) -> Result<String, RepoLensError> {
+        toml::to_string_pretty(self).map_err(Into::into)
     }
 
     /// Check if a rule is enabled

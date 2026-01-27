@@ -6,10 +6,10 @@
 //! - Sensitive files (private keys, certificates, credentials)
 //! - Environment files (.env) that should not be committed
 
-use anyhow::Result;
 use rayon::prelude::*;
 
 use crate::config::Config;
+use crate::error::RepoLensError;
 use crate::rules::engine::RuleCategory;
 use crate::rules::patterns::SECRET_PATTERNS;
 use crate::rules::results::{Finding, Severity};
@@ -39,7 +39,7 @@ impl RuleCategory for SecretsRules {
     /// # Errors
     ///
     /// Returns an error if the scan fails
-    async fn run(&self, scanner: &Scanner, config: &Config) -> Result<Vec<Finding>> {
+    async fn run(&self, scanner: &Scanner, config: &Config) -> Result<Vec<Finding>, RepoLensError> {
         let mut findings = Vec::new();
 
         // Check for hardcoded secrets in source files
@@ -74,7 +74,10 @@ impl RuleCategory for SecretsRules {
 /// # Returns
 ///
 /// A vector of findings for detected secrets
-async fn check_hardcoded_secrets(scanner: &Scanner, config: &Config) -> Result<Vec<Finding>> {
+async fn check_hardcoded_secrets(
+    scanner: &Scanner,
+    config: &Config,
+) -> Result<Vec<Finding>, RepoLensError> {
     let mut findings = Vec::new();
 
     // File extensions to scan
@@ -131,7 +134,11 @@ async fn check_hardcoded_secrets(scanner: &Scanner, config: &Config) -> Result<V
 /// # Returns
 ///
 /// A vector of findings for secrets found in this file
-fn check_file_for_secrets(file_path: &str, content: &str, config: &Config) -> Result<Vec<Finding>> {
+fn check_file_for_secrets(
+    file_path: &str,
+    content: &str,
+    config: &Config,
+) -> Result<Vec<Finding>, RepoLensError> {
     let mut findings = Vec::new();
 
     for pattern in SECRET_PATTERNS.iter() {
@@ -171,10 +178,14 @@ fn check_file_for_secrets(file_path: &str, content: &str, config: &Config) -> Re
 /// # Returns
 ///
 /// The line number (1-indexed)
-fn find_line_number(content: &str, captures: &regex::Captures) -> Result<usize> {
+fn find_line_number(content: &str, captures: &regex::Captures) -> Result<usize, RepoLensError> {
     let match_start = captures
         .get(0)
-        .ok_or_else(|| anyhow::anyhow!("No match found in pattern capture"))?
+        .ok_or_else(|| {
+            RepoLensError::Rule(crate::error::RuleError::ExecutionFailed {
+                message: "No match found in pattern capture".to_string(),
+            })
+        })?
         .start();
 
     Ok(content[..match_start].matches('\n').count() + 1)
@@ -193,7 +204,10 @@ fn find_line_number(content: &str, captures: &regex::Captures) -> Result<usize> 
 /// # Returns
 ///
 /// A vector of findings for detected sensitive files
-async fn check_sensitive_files(scanner: &Scanner, _config: &Config) -> Result<Vec<Finding>> {
+async fn check_sensitive_files(
+    scanner: &Scanner,
+    _config: &Config,
+) -> Result<Vec<Finding>, RepoLensError> {
     let mut findings = Vec::new();
 
     // List of sensitive file patterns
@@ -252,7 +266,10 @@ async fn check_sensitive_files(scanner: &Scanner, _config: &Config) -> Result<Ve
 /// # Returns
 ///
 /// A vector of findings for detected .env files
-async fn check_env_files(scanner: &Scanner, _config: &Config) -> Result<Vec<Finding>> {
+async fn check_env_files(
+    scanner: &Scanner,
+    _config: &Config,
+) -> Result<Vec<Finding>, RepoLensError> {
     let mut findings = Vec::new();
 
     // Check for .env files (but allow .env.example)

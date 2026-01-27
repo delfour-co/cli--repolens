@@ -1,6 +1,6 @@
 //! Terminal output formatting with colors
 
-use anyhow::Result;
+use crate::error::RepoLensError;
 use colored::Colorize;
 
 use super::{OutputRenderer, ReportRenderer};
@@ -172,7 +172,11 @@ impl Default for TerminalOutput {
 }
 
 impl OutputRenderer for TerminalOutput {
-    fn render_plan(&self, results: &AuditResults, plan: &ActionPlan) -> Result<String> {
+    fn render_plan(
+        &self,
+        results: &AuditResults,
+        plan: &ActionPlan,
+    ) -> Result<String, RepoLensError> {
         let mut output = String::new();
 
         output.push_str(&self.format_header(&results.repository_name, &results.preset));
@@ -185,7 +189,7 @@ impl OutputRenderer for TerminalOutput {
 }
 
 impl ReportRenderer for TerminalOutput {
-    fn render_report(&self, results: &AuditResults) -> Result<String> {
+    fn render_report(&self, results: &AuditResults) -> Result<String, RepoLensError> {
         let mut output = String::new();
 
         output.push_str(&self.format_header(&results.repository_name, &results.preset));

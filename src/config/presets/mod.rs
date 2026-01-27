@@ -1,7 +1,5 @@
 //! Preset configurations for different use cases
 
-use anyhow::{bail, Result};
-
 /// Available presets
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Preset {
@@ -15,15 +13,12 @@ pub enum Preset {
 
 impl Preset {
     /// Get preset from name
-    pub fn from_name(name: &str) -> Result<Self> {
+    pub fn from_name(name: &str) -> Option<Self> {
         match name.to_lowercase().as_str() {
-            "opensource" | "open-source" | "oss" => Ok(Self::OpenSource),
-            "enterprise" | "ent" | "internal" => Ok(Self::Enterprise),
-            "strict" | "secure" | "compliance" => Ok(Self::Strict),
-            _ => bail!(
-                "Unknown preset: {}. Valid presets: opensource, enterprise, strict",
-                name
-            ),
+            "opensource" | "open-source" | "oss" => Some(Self::OpenSource),
+            "enterprise" | "ent" | "internal" => Some(Self::Enterprise),
+            "strict" | "secure" | "compliance" => Some(Self::Strict),
+            _ => None,
         }
     }
 
@@ -142,7 +137,7 @@ mod tests {
         assert_eq!(Preset::from_name("oss").unwrap(), Preset::OpenSource);
         assert_eq!(Preset::from_name("enterprise").unwrap(), Preset::Enterprise);
         assert_eq!(Preset::from_name("strict").unwrap(), Preset::Strict);
-        assert!(Preset::from_name("invalid").is_err());
+        assert!(Preset::from_name("invalid").is_none());
     }
 
     #[test]

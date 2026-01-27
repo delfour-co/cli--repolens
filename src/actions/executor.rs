@@ -4,7 +4,7 @@
 //! It handles the actual execution of file creation, .gitignore updates,
 //! branch protection configuration, and GitHub settings updates.
 
-use anyhow::{Context, Result};
+use crate::error::RepoLensError;
 use tracing::{debug, info};
 
 use crate::config::Config;
@@ -66,7 +66,7 @@ impl ActionExecutor {
     /// # Errors
     ///
     /// Returns an error only if there's a critical failure in the executor itself
-    pub async fn execute(&self, plan: &ActionPlan) -> Result<Vec<ActionResult>> {
+    pub async fn execute(&self, plan: &ActionPlan) -> Result<Vec<ActionResult>, RepoLensError> {
         let mut results = Vec::new();
 
         for action in plan.actions() {
@@ -97,13 +97,11 @@ impl ActionExecutor {
     /// # Errors
     ///
     /// Returns an error if the action execution fails
-    async fn execute_action(&self, action: &Action) -> Result<()> {
+    async fn execute_action(&self, action: &Action) -> Result<(), RepoLensError> {
         match action.operation() {
             ActionOperation::UpdateGitignore { entries } => {
                 debug!("Updating .gitignore with {} entries", entries.len());
-                gitignore::update_gitignore(entries).with_context(|| {
-                    format!("Failed to update .gitignore for action '{}'", action.id())
-                })?;
+                gitignore::update_gitignore(entries)?;
             }
 
             ActionOperation::CreateFile {
@@ -112,30 +110,17 @@ impl ActionExecutor {
                 variables,
             } => {
                 debug!("Creating file {} from template {}", path, template);
-                templates::create_file_from_template(path, template, variables).with_context(
-                    || {
-                        format!(
-                            "Failed to create file '{}' from template '{}'",
-                            path, template
-                        )
-                    },
-                )?;
+                templates::create_file_from_template(path, template, variables)?;
             }
 
             ActionOperation::ConfigureBranchProtection { branch, settings } => {
                 debug!("Configuring branch protection for {}", branch);
-                branch_protection::configure(branch, settings)
-                    .await
-                    .with_context(|| {
-                        format!("Failed to configure branch protection for '{}'", branch)
-                    })?;
+                branch_protection::configure(branch, settings).await?;
             }
 
             ActionOperation::UpdateGitHubSettings { settings } => {
                 debug!("Updating GitHub repository settings");
-                github_settings::update(settings)
-                    .await
-                    .with_context(|| "Failed to update GitHub repository settings")?;
+                github_settings::update(settings).await?;
             }
         }
 

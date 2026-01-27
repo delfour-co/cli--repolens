@@ -1,6 +1,6 @@
 //! Rules evaluation engine
 
-use anyhow::Result;
+use crate::error::RepoLensError;
 use tracing::{debug, info, span, Level};
 
 use super::categories::{
@@ -18,7 +18,11 @@ pub trait RuleCategory: Send + Sync {
     fn name(&self) -> &'static str;
 
     /// Run the rules in this category
-    async fn run(&self, scanner: &Scanner, config: &Config) -> Result<Vec<super::Finding>>;
+    async fn run(
+        &self,
+        scanner: &Scanner,
+        config: &Config,
+    ) -> Result<Vec<super::Finding>, RepoLensError>;
 }
 
 /// Main rules evaluation engine
@@ -62,7 +66,7 @@ impl RulesEngine {
     }
 
     /// Run all enabled rules and return results
-    pub async fn run(&self, scanner: &Scanner) -> Result<AuditResults> {
+    pub async fn run(&self, scanner: &Scanner) -> Result<AuditResults, RepoLensError> {
         info!("Starting audit with preset: {}", self.config.preset);
 
         let repo_name = scanner.repository_name();

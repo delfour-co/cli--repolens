@@ -1,20 +1,26 @@
 //! GitHub repository settings management
 
-use anyhow::{bail, Context, Result};
+use crate::error::{ActionError, ProviderError, RepoLensError};
 use std::process::Command;
 
 use super::plan::GitHubRepoSettings;
 use crate::utils::prerequisites::{get_repo_info, is_gh_available};
 
 /// Update GitHub repository settings
-pub async fn update(settings: &GitHubRepoSettings) -> Result<()> {
+pub async fn update(settings: &GitHubRepoSettings) -> Result<(), RepoLensError> {
     // Check if gh CLI is available
     if !is_gh_available() {
-        bail!("GitHub CLI (gh) is not installed or not authenticated.");
+        return Err(RepoLensError::Provider(
+            ProviderError::GitHubCliNotAvailable,
+        ));
     }
 
     // Get repository info
-    let repo = get_repo_info()?;
+    let repo = get_repo_info().map_err(|e| {
+        RepoLensError::Action(ActionError::ExecutionFailed {
+            message: format!("Failed to get repository info: {}", e),
+        })
+    })?;
 
     // Update repository settings
     let mut args = vec!["repo", "edit"];
@@ -29,10 +35,11 @@ pub async fn update(settings: &GitHubRepoSettings) -> Result<()> {
 
     // Execute repository edit
     if args.len() > 2 {
-        let output = Command::new("gh")
-            .args(&args)
-            .output()
-            .context("Failed to update repository settings")?;
+        let output = Command::new("gh").args(&args).output().map_err(|_| {
+            RepoLensError::Provider(ProviderError::CommandFailed {
+                command: format!("gh {}", args.join(" ")),
+            })
+        })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -50,7 +57,11 @@ pub async fn update(settings: &GitHubRepoSettings) -> Result<()> {
                 "PUT",
             ])
             .output()
-            .context("Failed to enable vulnerability alerts")?;
+            .map_err(|_| {
+                RepoLensError::Provider(ProviderError::CommandFailed {
+                    command: format!("gh api repos/{}/vulnerability-alerts", repo),
+                })
+            })?;
 
         if !output.status.success() {
             tracing::warn!(
@@ -69,7 +80,11 @@ pub async fn update(settings: &GitHubRepoSettings) -> Result<()> {
                 "PUT",
             ])
             .output()
-            .context("Failed to enable automated security fixes")?;
+            .map_err(|_| {
+                RepoLensError::Provider(ProviderError::CommandFailed {
+                    command: format!("gh api repos/{}/automated-security-fixes", repo),
+                })
+            })?;
 
         if !output.status.success() {
             tracing::warn!(

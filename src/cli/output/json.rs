@@ -1,6 +1,6 @@
 //! JSON output formatting
 
-use anyhow::Result;
+use crate::error::RepoLensError;
 use serde::Serialize;
 
 use super::{OutputRenderer, ReportRenderer};
@@ -46,7 +46,11 @@ struct ActionSummary<'a> {
 }
 
 impl OutputRenderer for JsonOutput {
-    fn render_plan(&self, results: &AuditResults, plan: &ActionPlan) -> Result<String> {
+    fn render_plan(
+        &self,
+        results: &AuditResults,
+        plan: &ActionPlan,
+    ) -> Result<String, RepoLensError> {
         let output = PlanOutput {
             version: env!("CARGO_PKG_VERSION"),
             repository: &results.repository_name,
@@ -74,7 +78,7 @@ impl OutputRenderer for JsonOutput {
 }
 
 impl ReportRenderer for JsonOutput {
-    fn render_report(&self, results: &AuditResults) -> Result<String> {
+    fn render_report(&self, results: &AuditResults) -> Result<String, RepoLensError> {
         Ok(serde_json::to_string_pretty(results)?)
     }
 }

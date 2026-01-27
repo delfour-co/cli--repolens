@@ -5,7 +5,7 @@
 //! - Explicit permissions configuration
 //! - Pinned action versions for security
 
-use anyhow::Result;
+use crate::error::RepoLensError;
 use regex::Regex;
 
 use crate::config::Config;
@@ -33,7 +33,7 @@ impl RuleCategory for WorkflowsRules {
     /// # Returns
     ///
     /// A vector of findings for workflow issues
-    async fn run(&self, scanner: &Scanner, config: &Config) -> Result<Vec<Finding>> {
+    async fn run(&self, scanner: &Scanner, config: &Config) -> Result<Vec<Finding>, RepoLensError> {
         let mut findings = Vec::new();
 
         // Check for workflows directory
@@ -72,7 +72,7 @@ impl RuleCategory for WorkflowsRules {
 /// # Returns
 ///
 /// A vector of findings for hardcoded secrets in workflows
-async fn check_workflow_secrets(scanner: &Scanner) -> Result<Vec<Finding>> {
+async fn check_workflow_secrets(scanner: &Scanner) -> Result<Vec<Finding>, RepoLensError> {
     let mut findings = Vec::new();
 
     // Patterns that suggest hardcoded secrets in workflows
@@ -139,7 +139,7 @@ async fn check_workflow_secrets(scanner: &Scanner) -> Result<Vec<Finding>> {
 /// # Returns
 ///
 /// A vector of findings for missing permissions
-async fn check_workflow_permissions(scanner: &Scanner) -> Result<Vec<Finding>> {
+async fn check_workflow_permissions(scanner: &Scanner) -> Result<Vec<Finding>, RepoLensError> {
     let mut findings = Vec::new();
 
     for file in scanner.files_in_directory(".github/workflows") {
@@ -185,7 +185,10 @@ async fn check_workflow_permissions(scanner: &Scanner) -> Result<Vec<Finding>> {
 /// # Returns
 ///
 /// A vector of findings for unpinned actions
-async fn check_pinned_actions(scanner: &Scanner, config: &Config) -> Result<Vec<Finding>> {
+async fn check_pinned_actions(
+    scanner: &Scanner,
+    config: &Config,
+) -> Result<Vec<Finding>, RepoLensError> {
     let mut findings = Vec::new();
 
     // Only check in strict mode

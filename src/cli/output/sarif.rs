@@ -1,6 +1,6 @@
 //! SARIF output formatting for GitHub Code Scanning integration
 
-use anyhow::Result;
+use crate::error::RepoLensError;
 use serde::Serialize;
 
 use super::OutputRenderer;
@@ -147,7 +147,11 @@ impl SarifOutput {
 }
 
 impl OutputRenderer for SarifOutput {
-    fn render_plan(&self, results: &AuditResults, _plan: &ActionPlan) -> Result<String> {
+    fn render_plan(
+        &self,
+        results: &AuditResults,
+        _plan: &ActionPlan,
+    ) -> Result<String, RepoLensError> {
         let rules: Vec<SarifRule> = results
             .findings()
             .iter()

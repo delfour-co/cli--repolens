@@ -5,7 +5,7 @@
 //! - Dependency lock files for reproducible builds
 //! - Runtime version files for consistent environments
 
-use anyhow::Result;
+use crate::error::RepoLensError;
 
 use crate::config::Config;
 use crate::rules::engine::RuleCategory;
@@ -32,7 +32,7 @@ impl RuleCategory for SecurityRules {
     /// # Returns
     ///
     /// A vector of findings for security issues
-    async fn run(&self, scanner: &Scanner, config: &Config) -> Result<Vec<Finding>> {
+    async fn run(&self, scanner: &Scanner, config: &Config) -> Result<Vec<Finding>, RepoLensError> {
         let mut findings = Vec::new();
 
         // Check CODEOWNERS
@@ -62,7 +62,10 @@ impl RuleCategory for SecurityRules {
 /// # Returns
 ///
 /// A vector of findings for CODEOWNERS issues
-async fn check_codeowners(scanner: &Scanner, config: &Config) -> Result<Vec<Finding>> {
+async fn check_codeowners(
+    scanner: &Scanner,
+    config: &Config,
+) -> Result<Vec<Finding>, RepoLensError> {
     let mut findings = Vec::new();
 
     let codeowners_files = ["CODEOWNERS", ".github/CODEOWNERS", "docs/CODEOWNERS"];
@@ -107,7 +110,7 @@ async fn check_codeowners(scanner: &Scanner, config: &Config) -> Result<Vec<Find
 /// # Returns
 ///
 /// A vector of findings for dependency-related issues
-async fn check_dependencies(scanner: &Scanner) -> Result<Vec<Finding>> {
+async fn check_dependencies(scanner: &Scanner) -> Result<Vec<Finding>, RepoLensError> {
     let mut findings = Vec::new();
 
     // Check for lock files (indicates dependency management)

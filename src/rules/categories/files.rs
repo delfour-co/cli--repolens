@@ -5,9 +5,8 @@
 //! - .gitignore configuration and recommended entries
 //! - Temporary files that shouldn't be committed
 
-use anyhow::Result;
-
 use crate::config::Config;
+use crate::error::RepoLensError;
 use crate::rules::engine::RuleCategory;
 use crate::rules::results::{Finding, Severity};
 use crate::scanner::Scanner;
@@ -32,7 +31,7 @@ impl RuleCategory for FilesRules {
     /// # Returns
     ///
     /// A vector of findings for file-related issues
-    async fn run(&self, scanner: &Scanner, config: &Config) -> Result<Vec<Finding>> {
+    async fn run(&self, scanner: &Scanner, config: &Config) -> Result<Vec<Finding>, RepoLensError> {
         let mut findings = Vec::new();
 
         // Check for large files
@@ -65,7 +64,7 @@ impl RuleCategory for FilesRules {
 /// # Returns
 ///
 /// A vector of findings for large files
-async fn check_large_files(scanner: &Scanner) -> Result<Vec<Finding>> {
+async fn check_large_files(scanner: &Scanner) -> Result<Vec<Finding>, RepoLensError> {
     let mut findings = Vec::new();
 
     // 10MB threshold
@@ -106,7 +105,7 @@ async fn check_large_files(scanner: &Scanner) -> Result<Vec<Finding>> {
 /// # Returns
 ///
 /// A vector of findings for .gitignore issues
-async fn check_gitignore(scanner: &Scanner) -> Result<Vec<Finding>> {
+async fn check_gitignore(scanner: &Scanner) -> Result<Vec<Finding>, RepoLensError> {
     let mut findings = Vec::new();
 
     // Check if .gitignore exists
@@ -173,7 +172,7 @@ async fn check_gitignore(scanner: &Scanner) -> Result<Vec<Finding>> {
 /// # Returns
 ///
 /// A vector of findings for temporary files
-async fn check_temp_files(scanner: &Scanner) -> Result<Vec<Finding>> {
+async fn check_temp_files(scanner: &Scanner) -> Result<Vec<Finding>, RepoLensError> {
     let mut findings = Vec::new();
 
     let temp_patterns = ["*.log", "*.tmp", "*.temp", "*~", "*.swp", "*.swo", "*.bak"];

@@ -1,6 +1,6 @@
 //! Template file creation
 
-use anyhow::{bail, Context, Result};
+use crate::error::{ActionError, RepoLensError};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -10,7 +10,7 @@ pub fn create_file_from_template(
     path: &str,
     template_name: &str,
     variables: &HashMap<String, String>,
-) -> Result<()> {
+) -> Result<(), RepoLensError> {
     let template_content = get_template(template_name)?;
 
     // Replace variables in template
@@ -26,17 +26,27 @@ pub fn create_file_from_template(
     // Create parent directories if needed
     if let Some(parent) = file_path.parent() {
         if !parent.as_os_str().is_empty() {
-            fs::create_dir_all(parent).context("Failed to create parent directories")?;
+            fs::create_dir_all(parent).map_err(|e| {
+                RepoLensError::Action(ActionError::DirectoryCreate {
+                    path: parent.display().to_string(),
+                    source: e,
+                })
+            })?;
         }
     }
 
-    fs::write(file_path, content).context(format!("Failed to write file: {}", path))?;
+    fs::write(file_path, content).map_err(|e| {
+        RepoLensError::Action(ActionError::FileWrite {
+            path: path.to_string(),
+            source: e,
+        })
+    })?;
 
     Ok(())
 }
 
 /// Get template content by name
-fn get_template(name: &str) -> Result<String> {
+fn get_template(name: &str) -> Result<String, RepoLensError> {
     match name {
         "LICENSE/MIT" => Ok(MIT_LICENSE.to_string()),
         "LICENSE/Apache-2.0" => Ok(APACHE_LICENSE.to_string()),
@@ -47,7 +57,9 @@ fn get_template(name: &str) -> Result<String> {
         "ISSUE_TEMPLATE/bug_report.md" => Ok(BUG_REPORT_TEMPLATE.to_string()),
         "ISSUE_TEMPLATE/feature_request.md" => Ok(FEATURE_REQUEST_TEMPLATE.to_string()),
         "PULL_REQUEST_TEMPLATE/pull_request_template.md" => Ok(PULL_REQUEST_TEMPLATE.to_string()),
-        _ => bail!("Unknown template: {}", name),
+        _ => Err(RepoLensError::Action(ActionError::UnknownTemplate {
+            name: name.to_string(),
+        })),
     }
 }
 

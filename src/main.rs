@@ -2,7 +2,6 @@
 //!
 //! This is the main entry point for the CLI application.
 
-use anyhow::Result;
 use clap::Parser;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
@@ -14,6 +13,8 @@ mod providers;
 mod rules;
 mod scanner;
 mod utils;
+
+use error::RepoLensError;
 
 /// Exit codes for the CLI
 pub mod exit_codes {
@@ -30,7 +31,7 @@ pub mod exit_codes {
 use cli::{Cli, Commands};
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> Result<(), RepoLensError> {
     // Parse CLI arguments
     let cli = Cli::parse();
 
@@ -49,7 +50,7 @@ async fn main() -> Result<()> {
     match result {
         Ok(exit_code) => std::process::exit(exit_code),
         Err(e) => {
-            eprintln!("Error: {e:?}");
+            eprintln!("Error: {}", e);
             std::process::exit(1);
         }
     }

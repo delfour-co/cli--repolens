@@ -1,6 +1,5 @@
 //! Apply command - Apply planned changes to the repository
 
-use anyhow::{Context, Result};
 use colored::Colorize;
 use dialoguer::Confirm;
 use std::path::PathBuf;
@@ -9,11 +8,12 @@ use super::ApplyArgs;
 use crate::actions::executor::ActionExecutor;
 use crate::actions::planner::ActionPlanner;
 use crate::config::Config;
+use crate::error::RepoLensError;
 use crate::exit_codes;
 use crate::rules::engine::RulesEngine;
 use crate::scanner::Scanner;
 
-pub async fn execute(args: ApplyArgs) -> Result<i32> {
+pub async fn execute(args: ApplyArgs) -> Result<i32, RepoLensError> {
     // Load configuration
     let config = Config::load_or_default()?;
 
@@ -22,7 +22,7 @@ pub async fn execute(args: ApplyArgs) -> Result<i32> {
 
     // Run the rules engine to get current state
     let engine = RulesEngine::new(config.clone());
-    let audit_results = engine.run(&scanner).await.context("Failed to run audit")?;
+    let audit_results = engine.run(&scanner).await?;
 
     // Generate action plan
     let planner = ActionPlanner::new(config.clone());
@@ -61,7 +61,12 @@ pub async fn execute(args: ApplyArgs) -> Result<i32> {
         let confirm = Confirm::new()
             .with_prompt("Apply these changes?")
             .default(false)
-            .interact()?;
+            .interact()
+            .map_err(|e| {
+                RepoLensError::Action(crate::error::ActionError::ExecutionFailed {
+                    message: format!("Failed to get user input: {}", e),
+                })
+            })?;
 
         if !confirm {
             println!("{}", "Aborted.".yellow());

@@ -1,17 +1,17 @@
 //! Report command - Generate an audit report
 
-use anyhow::{Context, Result};
 use colored::Colorize;
 use std::path::PathBuf;
 
 use super::{ReportArgs, ReportFormat};
 use crate::cli::output::{HtmlReport, JsonOutput, MarkdownReport, ReportRenderer};
 use crate::config::Config;
+use crate::error::RepoLensError;
 use crate::exit_codes;
 use crate::rules::engine::RulesEngine;
 use crate::scanner::Scanner;
 
-pub async fn execute(args: ReportArgs) -> Result<i32> {
+pub async fn execute(args: ReportArgs) -> Result<i32, RepoLensError> {
     // Load configuration
     let config = Config::load_or_default()?;
 
@@ -20,7 +20,7 @@ pub async fn execute(args: ReportArgs) -> Result<i32> {
 
     // Run the rules engine
     let engine = RulesEngine::new(config);
-    let audit_results = engine.run(&scanner).await.context("Failed to run audit")?;
+    let audit_results = engine.run(&scanner).await?;
 
     // Generate report
     let renderer: Box<dyn ReportRenderer> = match args.format {
@@ -41,7 +41,12 @@ pub async fn execute(args: ReportArgs) -> Result<i32> {
         PathBuf::from(format!("repolens-report.{extension}"))
     });
 
-    std::fs::write(&output_path, &report).context("Failed to write report file")?;
+    std::fs::write(&output_path, &report).map_err(|e| {
+        RepoLensError::Action(crate::error::ActionError::FileWrite {
+            path: output_path.display().to_string(),
+            source: e,
+        })
+    })?;
 
     println!(
         "{} Report written to: {}",

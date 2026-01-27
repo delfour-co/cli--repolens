@@ -1,6 +1,6 @@
 //! Markdown report output
 
-use anyhow::Result;
+use crate::error::RepoLensError;
 use chrono::Utc;
 
 use super::ReportRenderer;
@@ -17,7 +17,7 @@ impl MarkdownReport {
 }
 
 impl ReportRenderer for MarkdownReport {
-    fn render_report(&self, results: &AuditResults) -> Result<String> {
+    fn render_report(&self, results: &AuditResults) -> Result<String, RepoLensError> {
         let mut output = String::new();
 
         // Header

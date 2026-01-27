@@ -13,15 +13,19 @@ pub use sarif::SarifOutput;
 pub use terminal::TerminalOutput;
 
 use crate::actions::plan::ActionPlan;
+use crate::error::RepoLensError;
 use crate::rules::results::AuditResults;
-use anyhow::Result;
 
 /// Trait for rendering plan output
 pub trait OutputRenderer {
-    fn render_plan(&self, results: &AuditResults, plan: &ActionPlan) -> Result<String>;
+    fn render_plan(
+        &self,
+        results: &AuditResults,
+        plan: &ActionPlan,
+    ) -> Result<String, RepoLensError>;
 }
 
 /// Trait for rendering report output
 pub trait ReportRenderer {
-    fn render_report(&self, results: &AuditResults) -> Result<String>;
+    fn render_report(&self, results: &AuditResults) -> Result<String, RepoLensError>;
 }

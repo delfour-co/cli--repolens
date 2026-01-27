@@ -12,6 +12,8 @@ pub mod rules;
 pub mod scanner;
 pub mod utils;
 
+pub use error::RepoLensError;
+
 /// Exit codes for the CLI
 pub mod exit_codes {
     /// Success - no issues found

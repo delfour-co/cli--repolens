@@ -1,6 +1,6 @@
 //! HTML report output
 
-use anyhow::Result;
+use crate::error::RepoLensError;
 use chrono::Utc;
 
 use super::ReportRenderer;
@@ -17,7 +17,7 @@ impl HtmlReport {
 }
 
 impl ReportRenderer for HtmlReport {
-    fn render_report(&self, results: &AuditResults) -> Result<String> {
+    fn render_report(&self, results: &AuditResults) -> Result<String, RepoLensError> {
         let critical_count = results.count_by_severity(Severity::Critical);
         let warning_count = results.count_by_severity(Severity::Warning);
         let info_count = results.count_by_severity(Severity::Info);

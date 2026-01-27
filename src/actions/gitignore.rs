@@ -1,16 +1,21 @@
 //! Gitignore file management
 
-use anyhow::{Context, Result};
+use crate::error::{ActionError, RepoLensError};
 use std::fs;
 use std::path::Path;
 
 /// Update .gitignore with new entries at the given root path
-pub fn update_gitignore_at(root: &Path, entries: &[String]) -> Result<()> {
+pub fn update_gitignore_at(root: &Path, entries: &[String]) -> Result<(), RepoLensError> {
     let gitignore_path = root.join(".gitignore");
 
     // Read existing content or create empty
     let mut content = if gitignore_path.exists() {
-        fs::read_to_string(&gitignore_path).context("Failed to read .gitignore")?
+        fs::read_to_string(&gitignore_path).map_err(|e| {
+            RepoLensError::Scan(crate::error::ScanError::FileRead {
+                path: gitignore_path.display().to_string(),
+                source: e,
+            })
+        })?
     } else {
         String::new()
     };
@@ -64,14 +69,23 @@ pub fn update_gitignore_at(root: &Path, entries: &[String]) -> Result<()> {
     }
 
     // Write back
-    fs::write(&gitignore_path, content).context("Failed to write .gitignore")?;
+    fs::write(&gitignore_path, content).map_err(|e| {
+        RepoLensError::Action(ActionError::FileWrite {
+            path: gitignore_path.display().to_string(),
+            source: e,
+        })
+    })?;
 
     Ok(())
 }
 
 /// Update .gitignore with new entries in current directory
-pub fn update_gitignore(entries: &[String]) -> Result<()> {
-    let current_dir = std::env::current_dir().context("Failed to get current directory")?;
+pub fn update_gitignore(entries: &[String]) -> Result<(), RepoLensError> {
+    let current_dir = std::env::current_dir().map_err(|e| {
+        RepoLensError::Action(ActionError::ExecutionFailed {
+            message: format!("Failed to get current directory: {}", e),
+        })
+    })?;
     update_gitignore_at(&current_dir, entries)
 }
 

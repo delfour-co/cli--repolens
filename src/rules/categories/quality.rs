@@ -5,7 +5,7 @@
 //! - Linting configuration
 //! - Editor configuration files
 
-use anyhow::Result;
+use crate::error::RepoLensError;
 
 use crate::config::Config;
 use crate::rules::engine::RuleCategory;
@@ -32,7 +32,7 @@ impl RuleCategory for QualityRules {
     /// # Returns
     ///
     /// A vector of findings for quality issues
-    async fn run(&self, scanner: &Scanner, config: &Config) -> Result<Vec<Finding>> {
+    async fn run(&self, scanner: &Scanner, config: &Config) -> Result<Vec<Finding>, RepoLensError> {
         let mut findings = Vec::new();
 
         // Check for tests
@@ -65,7 +65,7 @@ impl RuleCategory for QualityRules {
 /// # Returns
 ///
 /// A vector of findings for test-related issues
-async fn check_tests(scanner: &Scanner) -> Result<Vec<Finding>> {
+async fn check_tests(scanner: &Scanner) -> Result<Vec<Finding>, RepoLensError> {
     let mut findings = Vec::new();
 
     // Check for test directories
@@ -129,7 +129,7 @@ async fn check_tests(scanner: &Scanner) -> Result<Vec<Finding>> {
 /// # Returns
 ///
 /// A vector of findings for missing linting configuration
-async fn check_linting(scanner: &Scanner) -> Result<Vec<Finding>> {
+async fn check_linting(scanner: &Scanner) -> Result<Vec<Finding>, RepoLensError> {
     let mut findings = Vec::new();
 
     // Linting config files by language/tool
@@ -220,7 +220,7 @@ async fn check_linting(scanner: &Scanner) -> Result<Vec<Finding>> {
 /// # Returns
 ///
 /// A vector of findings for missing .editorconfig
-async fn check_editorconfig(scanner: &Scanner) -> Result<Vec<Finding>> {
+async fn check_editorconfig(scanner: &Scanner) -> Result<Vec<Finding>, RepoLensError> {
     let mut findings = Vec::new();
 
     if !scanner.file_exists(".editorconfig") {
