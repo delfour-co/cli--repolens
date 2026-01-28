@@ -1,6 +1,6 @@
 //! Custom rules category
 //!
-//! Allows users to define custom audit rules via regex patterns in configuration.
+//! Allows users to define custom audit rules via regex patterns or shell commands in configuration.
 
 use crate::config::Config;
 use crate::error::RepoLensError;
@@ -8,6 +8,7 @@ use crate::rules::engine::RuleCategory;
 use crate::rules::{Finding, Severity};
 use crate::scanner::Scanner;
 use regex::Regex;
+use std::process::Command;
 use tracing::debug;
 
 /// Custom rules implementation
@@ -106,6 +107,43 @@ fn glob_match_single_star(pattern: &str, text: &str) -> bool {
     true
 }
 
+/// Execute a shell command and return its exit code
+fn execute_shell_command(command: &str) -> Result<i32, RepoLensError> {
+    // Use sh -c to execute the command (works on Unix-like systems)
+    #[cfg(unix)]
+    {
+        let output = Command::new("sh")
+            .arg("-c")
+            .arg(command)
+            .output()
+            .map_err(|e| {
+                RepoLensError::Scan(crate::error::ScanError::FileRead {
+                    path: format!("shell command: {}", command),
+                    source: std::io::Error::other(format!("Failed to execute command: {}", e)),
+                })
+            })?;
+
+        Ok(output.status.code().unwrap_or(1))
+    }
+
+    // On Windows, use cmd /C
+    #[cfg(windows)]
+    {
+        let output = Command::new("cmd")
+            .arg("/C")
+            .arg(command)
+            .output()
+            .map_err(|e| {
+                RepoLensError::Scan(crate::error::ScanError::FileRead {
+                    path: format!("shell command: {}", command),
+                    source: std::io::Error::other(format!("Failed to execute command: {}", e)),
+                })
+            })?;
+
+        Ok(output.status.code().unwrap_or(1))
+    }
+}
+
 #[async_trait::async_trait]
 impl RuleCategory for CustomRules {
     fn name(&self) -> &'static str {
@@ -125,10 +163,99 @@ impl RuleCategory for CustomRules {
         let all_files = scanner.all_files();
 
         for (rule_id, rule) in &config.custom_rules.rules {
-            debug!(rule_id = %rule_id, pattern = %rule.pattern, "Processing custom rule");
+            // Determine severity
+            let severity = match rule.severity.to_lowercase().as_str() {
+                "critical" => Severity::Critical,
+                "warning" => Severity::Warning,
+                "info" => Severity::Info,
+                _ => Severity::Warning,
+            };
+
+            // Handle shell command rules
+            if let Some(ref command) = rule.command {
+                debug!(rule_id = %rule_id, command = %command, "Processing custom shell command rule");
+
+                match execute_shell_command(command) {
+                    Ok(exit_code) => {
+                        let command_succeeded = exit_code == 0;
+                        let should_report = if rule.invert {
+                            !command_succeeded // Report if command failed
+                        } else {
+                            command_succeeded // Report if command succeeded
+                        };
+
+                        if should_report {
+                            let message = rule.message.clone().unwrap_or_else(|| {
+                                if rule.invert {
+                                    format!(
+                                        "Command '{}' failed (exit code: {})",
+                                        command, exit_code
+                                    )
+                                } else {
+                                    format!("Command '{}' succeeded", command)
+                                }
+                            });
+
+                            let description = rule.description.clone().unwrap_or_else(|| {
+                                format!(
+                                    "Custom rule '{}' triggered by command '{}'",
+                                    rule_id, command
+                                )
+                            });
+
+                            findings.push(Finding {
+                                rule_id: format!("custom/{}", rule_id),
+                                category: "custom".to_string(),
+                                severity,
+                                message,
+                                location: None,
+                                description: Some(description),
+                                remediation: rule.remediation.clone(),
+                            });
+                        }
+                    }
+                    Err(e) => {
+                        debug!(
+                            rule_id = %rule_id,
+                            command = %command,
+                            error = %e,
+                            "Failed to execute shell command"
+                        );
+                        // Report error if invert=false (command should succeed but failed)
+                        if !rule.invert {
+                            findings.push(Finding {
+                                rule_id: format!("custom/{}", rule_id),
+                                category: "custom".to_string(),
+                                severity,
+                                message: rule.message.clone().unwrap_or_else(|| {
+                                    format!("Failed to execute command '{}': {}", command, e)
+                                }),
+                                location: None,
+                                description: rule.description.clone(),
+                                remediation: rule.remediation.clone(),
+                            });
+                        }
+                    }
+                }
+                continue;
+            }
+
+            // Handle regex pattern rules
+            let pattern = match &rule.pattern {
+                Some(p) => p,
+                None => {
+                    debug!(
+                        rule_id = %rule_id,
+                        "Custom rule must have either 'pattern' or 'command'"
+                    );
+                    continue;
+                }
+            };
+
+            debug!(rule_id = %rule_id, pattern = %pattern, "Processing custom regex pattern rule");
 
             // Compile the regex pattern
-            let regex = match Regex::new(&rule.pattern) {
+            let regex = match Regex::new(pattern) {
                 Ok(r) => r,
                 Err(e) => {
                     debug!(
@@ -138,14 +265,6 @@ impl RuleCategory for CustomRules {
                     );
                     continue;
                 }
-            };
-
-            // Determine severity
-            let severity = match rule.severity.to_lowercase().as_str() {
-                "critical" => Severity::Critical,
-                "warning" => Severity::Warning,
-                "info" => Severity::Info,
-                _ => Severity::Warning,
             };
 
             // Filter files based on glob patterns
@@ -197,9 +316,9 @@ impl RuleCategory for CustomRules {
 
                     let message = rule.message.clone().unwrap_or_else(|| {
                         if rule.invert {
-                            format!("Required pattern '{}' not found", rule.pattern)
+                            format!("Required pattern '{}' not found", pattern)
                         } else {
-                            format!("Pattern '{}' matched", rule.pattern)
+                            format!("Pattern '{}' matched", pattern)
                         }
                     });
 
@@ -267,7 +386,8 @@ mod tests {
         fs::write(&test_file, "// TODO: fix this later\nfn main() {}").unwrap();
 
         let rule = CustomRule {
-            pattern: "TODO".to_string(),
+            pattern: Some("TODO".to_string()),
+            command: None,
             severity: "warning".to_string(),
             files: vec!["**/*.rs".to_string()],
             message: Some("TODO comment found".to_string()),
@@ -295,7 +415,8 @@ mod tests {
         fs::write(&test_file, "fn main() { println!(\"Hello\"); }").unwrap();
 
         let rule = CustomRule {
-            pattern: "TODO".to_string(),
+            pattern: Some("TODO".to_string()),
+            command: None,
             severity: "warning".to_string(),
             files: vec!["**/*.rs".to_string()],
             message: None,
@@ -320,7 +441,8 @@ mod tests {
         fs::write(&test_file, "fn helper() {}").unwrap();
 
         let rule = CustomRule {
-            pattern: r"^//!".to_string(), // Module doc comment
+            pattern: Some(r"^//!".to_string()), // Module doc comment
+            command: None,
             severity: "info".to_string(),
             files: vec!["**/lib.rs".to_string()],
             message: Some("Missing module documentation".to_string()),
@@ -347,7 +469,8 @@ mod tests {
         fs::write(temp_dir.path().join("test.js"), "// TODO: fix").unwrap();
 
         let rule = CustomRule {
-            pattern: "TODO".to_string(),
+            pattern: Some("TODO".to_string()),
+            command: None,
             severity: "warning".to_string(),
             files: vec!["**/*.rs".to_string()], // Only Rust files
             message: None,
@@ -376,7 +499,8 @@ mod tests {
         fs::write(temp_dir.path().join("test.rs"), "FIXME: urgent").unwrap();
 
         let rule = CustomRule {
-            pattern: "FIXME".to_string(),
+            pattern: Some("FIXME".to_string()),
+            command: None,
             severity: "critical".to_string(),
             files: vec![],
             message: None,
@@ -415,7 +539,8 @@ mod tests {
         fs::write(temp_dir.path().join("test.rs"), "test content").unwrap();
 
         let rule = CustomRule {
-            pattern: "[invalid regex".to_string(), // Invalid regex
+            pattern: Some("[invalid regex".to_string()), // Invalid regex
+            command: None,
             severity: "warning".to_string(),
             files: vec![],
             message: None,
@@ -430,6 +555,113 @@ mod tests {
 
         // Should not panic, just skip the invalid rule
         let findings = custom_rules.run(&scanner, &config).await.unwrap();
+        assert!(findings.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_custom_rule_shell_command_success() {
+        let temp_dir = TempDir::new().unwrap();
+        let scanner = Scanner::new(temp_dir.path().to_path_buf());
+
+        // Command that succeeds (exit code 0)
+        let rule = CustomRule {
+            pattern: None,
+            command: Some("echo test".to_string()),
+            severity: "warning".to_string(),
+            files: vec![],
+            message: Some("Command succeeded".to_string()),
+            description: None,
+            remediation: None,
+            invert: false, // Report on success
+        };
+
+        let config = create_test_config_with_rule("test-command", rule);
+        let custom_rules = CustomRules;
+
+        let findings = custom_rules.run(&scanner, &config).await.unwrap();
+
+        // Should report because command succeeded and invert=false
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].rule_id, "custom/test-command");
+    }
+
+    #[tokio::test]
+    async fn test_custom_rule_shell_command_failure() {
+        let temp_dir = TempDir::new().unwrap();
+        let scanner = Scanner::new(temp_dir.path().to_path_buf());
+
+        // Command that fails (exit code != 0)
+        let rule = CustomRule {
+            pattern: None,
+            command: Some("false".to_string()), // Always returns non-zero
+            severity: "warning".to_string(),
+            files: vec![],
+            message: Some("Command failed".to_string()),
+            description: None,
+            remediation: None,
+            invert: true, // Report on failure
+        };
+
+        let config = create_test_config_with_rule("test-command-fail", rule);
+        let custom_rules = CustomRules;
+
+        let findings = custom_rules.run(&scanner, &config).await.unwrap();
+
+        // Should report because command failed and invert=true
+        assert_eq!(findings.len(), 1);
+        assert!(findings[0].message.contains("Command failed"));
+    }
+
+    #[tokio::test]
+    async fn test_custom_rule_shell_command_invalid() {
+        let temp_dir = TempDir::new().unwrap();
+        let scanner = Scanner::new(temp_dir.path().to_path_buf());
+
+        // Invalid command that will fail to execute or return non-zero
+        let rule = CustomRule {
+            pattern: None,
+            command: Some("nonexistent-command-xyz123".to_string()),
+            severity: "warning".to_string(),
+            files: vec![],
+            message: None,
+            description: None,
+            remediation: None,
+            invert: true, // Report on failure (command will fail)
+        };
+
+        let config = create_test_config_with_rule("test-invalid-command", rule);
+        let custom_rules = CustomRules;
+
+        let findings = custom_rules.run(&scanner, &config).await.unwrap();
+
+        // Should report because command failed (exit code != 0) and invert=true
+        // Note: Some shells may return 127 for command not found, others may return 1
+        assert!(!findings.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_custom_rule_no_pattern_or_command() {
+        let temp_dir = TempDir::new().unwrap();
+        let scanner = Scanner::new(temp_dir.path().to_path_buf());
+
+        // Rule with neither pattern nor command
+        let rule = CustomRule {
+            pattern: None,
+            command: None,
+            severity: "warning".to_string(),
+            files: vec![],
+            message: None,
+            description: None,
+            remediation: None,
+            invert: false,
+        };
+
+        let config = create_test_config_with_rule("test-empty", rule);
+        let custom_rules = CustomRules;
+
+        let findings = custom_rules.run(&scanner, &config).await.unwrap();
+
+        // Should skip rule with no pattern or command
         assert!(findings.is_empty());
     }
 }

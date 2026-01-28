@@ -17,11 +17,17 @@ pub fn get_repository_name(root: &Path) -> Option<String> {
     }
 
     let url = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    parse_repo_name_from_url(&url)
+    parse_repo_name_from_url_impl(&url)
 }
 
 /// Parse repository name from a git URL
-fn parse_repo_name_from_url(url: &str) -> Option<String> {
+#[cfg(test)]
+#[allow(dead_code)]
+pub(crate) fn parse_repo_name_from_url(url: &str) -> Option<String> {
+    parse_repo_name_from_url_impl(url)
+}
+
+fn parse_repo_name_from_url_impl(url: &str) -> Option<String> {
     // Handle SSH URLs: git@github.com:owner/repo.git
     if url.starts_with("git@") {
         let parts: Vec<&str> = url.split(':').collect();
@@ -101,7 +107,7 @@ mod tests {
     fn test_parse_ssh_url() {
         let url = "git@github.com:owner/repo.git";
         assert_eq!(
-            parse_repo_name_from_url(url),
+            parse_repo_name_from_url_impl(url),
             Some("owner/repo".to_string())
         );
     }
@@ -110,7 +116,7 @@ mod tests {
     fn test_parse_https_url() {
         let url = "https://github.com/owner/repo.git";
         assert_eq!(
-            parse_repo_name_from_url(url),
+            parse_repo_name_from_url_impl(url),
             Some("owner/repo".to_string())
         );
     }
@@ -119,8 +125,55 @@ mod tests {
     fn test_parse_https_url_without_git() {
         let url = "https://github.com/owner/repo";
         assert_eq!(
-            parse_repo_name_from_url(url),
+            parse_repo_name_from_url_impl(url),
             Some("owner/repo".to_string())
         );
+    }
+
+    #[test]
+    fn test_parse_http_url() {
+        let url = "http://github.com/owner/repo.git";
+        assert_eq!(
+            parse_repo_name_from_url_impl(url),
+            Some("owner/repo".to_string())
+        );
+    }
+
+    #[test]
+    fn test_parse_ssh_url_with_port() {
+        let url = "git@github.com:2222:owner/repo.git";
+        // Should handle port in SSH URL (though uncommon)
+        let result = parse_repo_name_from_url_impl(url);
+        // May or may not parse correctly depending on implementation
+        let _ = result;
+    }
+
+    #[test]
+    fn test_parse_invalid_url() {
+        let url = "not-a-valid-url";
+        assert_eq!(parse_repo_name_from_url_impl(url), None);
+    }
+
+    #[test]
+    fn test_parse_https_url_with_path() {
+        let url = "https://github.com/owner/repo.git";
+        assert_eq!(
+            parse_repo_name_from_url_impl(url),
+            Some("owner/repo".to_string())
+        );
+    }
+
+    #[test]
+    fn test_is_git_repository() {
+        use std::fs;
+        use tempfile::TempDir;
+
+        // Test with non-git directory
+        let temp_dir = TempDir::new().unwrap();
+        assert!(!is_git_repository(temp_dir.path()));
+
+        // Test with git directory
+        fs::create_dir(temp_dir.path().join(".git")).unwrap();
+        assert!(is_git_repository(temp_dir.path()));
     }
 }

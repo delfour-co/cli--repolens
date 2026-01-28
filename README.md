@@ -155,6 +155,29 @@ code_of_conduct = true
 security = true
 ```
 
+### Custom Rules
+
+Define your own audit rules using regex patterns or shell commands:
+
+```toml
+# Detect TODO comments
+[rules.custom."no-todo"]
+pattern = "TODO"
+severity = "warning"
+files = ["**/*.rs"]
+message = "TODO comment found"
+
+# Check git status (shell command)
+[rules.custom."check-git-status"]
+command = "git status --porcelain"
+severity = "warning"
+invert = true  # Fail if uncommitted changes
+message = "Working directory is not clean"
+```
+
+See the [Custom Rules documentation](wiki/Custom-Rules.md) for more examples and details.
+```
+
 ## Presets
 
 | Preset | Description |

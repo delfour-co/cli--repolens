@@ -233,14 +233,20 @@ pub struct TemplatesConfig {
 /// Custom rule configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CustomRule {
-    /// Regex pattern to match
-    pub pattern: String,
+    /// Regex pattern to match (required if command is not set)
+    #[serde(default)]
+    pub pattern: Option<String>,
+
+    /// Shell command to execute (required if pattern is not set)
+    /// The rule triggers if the command returns exit code 0 (or non-zero if invert=true)
+    #[serde(default)]
+    pub command: Option<String>,
 
     /// Severity level (critical, warning, info)
     #[serde(default = "default_custom_severity")]
     pub severity: String,
 
-    /// File glob patterns to include
+    /// File glob patterns to include (only used with pattern, not with command)
     #[serde(default)]
     pub files: Vec<String>,
 
@@ -253,7 +259,7 @@ pub struct CustomRule {
     /// Suggested remediation
     pub remediation: Option<String>,
 
-    /// If true, fail when pattern is NOT found (inverted matching)
+    /// If true, fail when pattern is NOT found or command returns non-zero (inverted matching)
     #[serde(default)]
     pub invert: bool,
 }

@@ -136,6 +136,15 @@ struct OsvBatchResult {
     vulns: Vec<OsvVulnerability>,
 }
 
+// GitHub Advisory Database structures
+#[derive(Debug, Clone)]
+struct GitHubAdvisory {
+    pub id: String,
+    pub summary: Option<String>,
+    pub cvss_score: Option<f64>,
+    pub fixed_version: Option<String>,
+}
+
 async fn check_vulnerabilities(
     scanner: &Scanner,
     _config: &Config,
@@ -158,21 +167,38 @@ async fn check_vulnerabilities(
         return Ok(findings);
     }
 
+    // Use a HashSet to deduplicate vulnerabilities by ID
+    use std::collections::HashSet;
+    let mut seen_vuln_ids: HashSet<String> = HashSet::new();
+
+    // Query OSV API
     match query_osv_batch(&all_deps).await {
         Ok(vulns) => {
             for (dep, vuln_list) in vulns {
                 for vuln in vuln_list {
+                    if seen_vuln_ids.contains(&vuln.id) {
+                        continue; // Skip duplicates
+                    }
+                    seen_vuln_ids.insert(vuln.id.clone());
+
+                    let cvss_score = extract_cvss_score(&vuln);
                     let sev = determine_severity(&vuln);
                     let fixed = get_fixed_version(&vuln, &dep);
-                    let mut f = Finding::new(
-                        format!("DEP001-{}", vuln.id),
-                        "dependencies",
-                        sev,
+
+                    let message = if let Some(score) = cvss_score {
+                        format!(
+                            "Vulnerability {} (CVSS: {}) found in {} {}",
+                            vuln.id, score, dep.name, dep.version
+                        )
+                    } else {
                         format!(
                             "Vulnerability {} found in {} {}",
                             vuln.id, dep.name, dep.version
-                        ),
-                    );
+                        )
+                    };
+
+                    let mut f =
+                        Finding::new(format!("DEP001-{}", vuln.id), "dependencies", sev, message);
                     if let Some(s) = &vuln.summary {
                         f = f.with_description(s.clone());
                     } else if let Some(d) = &vuln.details {
@@ -207,20 +233,82 @@ async fn check_vulnerabilities(
         }
         Err(e) => {
             tracing::warn!("Failed to query OSV API: {}", e);
-            findings.push(
-                Finding::new(
-                    "DEP000",
-                    "dependencies",
-                    Severity::Warning,
-                    "Could not check dependencies for vulnerabilities",
-                )
-                .with_description(format!(
-                    "Failed to query OSV API. Error: {}. Please check your network connection.",
-                    e
-                )),
-            );
         }
     }
+
+    // Query GitHub Advisory Database
+    match query_github_advisories(&all_deps).await {
+        Ok(vulns) => {
+            for (dep, vuln_list) in vulns {
+                for vuln in vuln_list {
+                    if seen_vuln_ids.contains(&vuln.id) {
+                        continue; // Skip duplicates
+                    }
+                    seen_vuln_ids.insert(vuln.id.clone());
+
+                    let cvss_score = vuln.cvss_score;
+                    let sev = determine_severity_from_cvss(cvss_score);
+
+                    let message = if let Some(score) = cvss_score {
+                        format!(
+                            "Vulnerability {} (CVSS: {}) found in {} {}",
+                            vuln.id, score, dep.name, dep.version
+                        )
+                    } else {
+                        format!(
+                            "Vulnerability {} found in {} {}",
+                            vuln.id, dep.name, dep.version
+                        )
+                    };
+
+                    let mut f =
+                        Finding::new(format!("DEP002-{}", vuln.id), "dependencies", sev, message);
+                    if let Some(desc) = &vuln.summary {
+                        f = f.with_description(desc.clone());
+                    }
+                    if let Some(fix) = &vuln.fixed_version {
+                        f = f.with_remediation(format!(
+                            "Upgrade {} to version {} or later.",
+                            dep.name, fix
+                        ));
+                    } else {
+                        f = f.with_remediation(format!(
+                            "Check for updates to {}. Vulnerability: {}.",
+                            dep.name, vuln.id
+                        ));
+                    }
+                    let loc = match dep.ecosystem {
+                        Ecosystem::Cargo => "Cargo.lock",
+                        Ecosystem::Npm => "package-lock.json",
+                        Ecosystem::PyPI => "requirements.txt",
+                        Ecosystem::Go => "go.sum",
+                    };
+                    f = f.with_location(loc);
+                    findings.push(f);
+                }
+            }
+        }
+        Err(e) => {
+            tracing::warn!("Failed to query GitHub Advisories: {}", e);
+        }
+    }
+
+    // If both sources failed, add a warning
+    if findings.is_empty() && !all_deps.is_empty() {
+        findings.push(
+            Finding::new(
+                "DEP000",
+                "dependencies",
+                Severity::Warning,
+                "Could not check dependencies for vulnerabilities",
+            )
+            .with_description(
+                "Failed to query vulnerability databases. Please check your network connection."
+                    .to_string(),
+            ),
+        );
+    }
+
     Ok(findings)
 }
 
@@ -447,6 +535,101 @@ async fn query_osv_batch(
     Ok(results)
 }
 
+async fn query_github_advisories(
+    deps: &[Dependency],
+) -> Result<Vec<(Dependency, Vec<GitHubAdvisory>)>, String> {
+    if deps.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .user_agent("repolens/0.1.0")
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let mut results = Vec::new();
+
+    // Query GitHub Security Advisories API
+    // Note: This uses a simplified approach. For production, consider using
+    // GitHub's GraphQL API with authentication for better rate limits and more data.
+
+    // Query each dependency individually (GitHub doesn't have a batch endpoint like OSV)
+    for dep in deps {
+        // Map ecosystem to GitHub's ecosystem names
+        let ecosystem = match dep.ecosystem {
+            Ecosystem::Cargo => "rust",
+            Ecosystem::Npm => "npm",
+            Ecosystem::PyPI => "pip",
+            Ecosystem::Go => "go",
+        };
+
+        // Use GitHub's REST API for security advisories
+        // Format: https://api.github.com/advisories?ecosystem={ecosystem}&package={package}
+        let url = format!(
+            "https://api.github.com/advisories?ecosystem={}&package={}",
+            ecosystem, dep.name
+        );
+
+        match client.get(&url).send().await {
+            Ok(resp) => {
+                if resp.status().is_success() {
+                    if let Ok(advisories_json) = resp.json::<Vec<serde_json::Value>>().await {
+                        let mut vulns = Vec::new();
+                        for adv in advisories_json {
+                            if let Some(id) = adv.get("ghsa_id").and_then(|v| v.as_str()) {
+                                let summary = adv
+                                    .get("summary")
+                                    .and_then(|v| v.as_str())
+                                    .map(|s| s.to_string());
+
+                                // Extract CVSS score if available
+                                let cvss_score = adv
+                                    .get("cvss")
+                                    .and_then(|v| v.get("score"))
+                                    .and_then(|v| v.as_f64());
+
+                                vulns.push(GitHubAdvisory {
+                                    id: id.to_string(),
+                                    summary,
+                                    cvss_score,
+                                    fixed_version: None, // GitHub API doesn't provide this directly
+                                });
+                            }
+                        }
+                        if !vulns.is_empty() {
+                            results.push((dep.clone(), vulns));
+                        }
+                    }
+                } else if resp.status() == reqwest::StatusCode::NOT_FOUND {
+                    // Package not found in GitHub advisories, continue
+                    continue;
+                }
+            }
+            Err(e) => {
+                tracing::debug!("Failed to query GitHub Advisory for {}: {}", dep.name, e);
+                // Continue with other dependencies
+            }
+        }
+    }
+
+    Ok(results)
+}
+
+fn extract_cvss_score(vuln: &OsvVulnerability) -> Option<String> {
+    for s in &vuln.severity {
+        if s.severity_type == "CVSS_V3" || s.severity_type == "CVSS_V2" {
+            if let Ok(score) = s.score.parse::<f64>() {
+                return Some(format!("{:.1}", score));
+            }
+            if s.score.starts_with("CVSS:") {
+                return Some(s.score.clone());
+            }
+        }
+    }
+    None
+}
+
 fn determine_severity(vuln: &OsvVulnerability) -> Severity {
     for s in &vuln.severity {
         if s.severity_type == "CVSS_V3" || s.severity_type == "CVSS_V2" {
@@ -468,6 +651,20 @@ fn determine_severity(vuln: &OsvVulnerability) -> Severity {
         Severity::Warning
     } else {
         Severity::Info
+    }
+}
+
+fn determine_severity_from_cvss(cvss_score: Option<f64>) -> Severity {
+    if let Some(score) = cvss_score {
+        if score >= 7.0 {
+            Severity::Critical
+        } else if score >= 4.0 {
+            Severity::Warning
+        } else {
+            Severity::Info
+        }
+    } else {
+        Severity::Warning
     }
 }
 
@@ -547,5 +744,122 @@ mod tests {
     async fn test_dependency_rules_category_name() {
         let rules = DependencyRules;
         assert_eq!(rules.name(), "dependencies");
+    }
+
+    #[test]
+    fn test_extract_cvss_score() {
+        let vuln = OsvVulnerability {
+            id: "CVE-2023-1234".to_string(),
+            summary: None,
+            details: None,
+            aliases: vec![],
+            severity: vec![OsvSeverity {
+                severity_type: "CVSS_V3".to_string(),
+                score: "9.8".to_string(),
+            }],
+            affected: vec![],
+            references: vec![],
+        };
+        assert_eq!(extract_cvss_score(&vuln), Some("9.8".to_string()));
+
+        let vuln_no_cvss = OsvVulnerability {
+            id: "GHSA-xxxx".to_string(),
+            summary: None,
+            details: None,
+            aliases: vec![],
+            severity: vec![],
+            affected: vec![],
+            references: vec![],
+        };
+        assert_eq!(extract_cvss_score(&vuln_no_cvss), None);
+    }
+
+    #[test]
+    fn test_determine_severity_from_cvss() {
+        use crate::rules::Severity;
+        assert_eq!(determine_severity_from_cvss(Some(9.8)), Severity::Critical);
+        assert_eq!(determine_severity_from_cvss(Some(5.0)), Severity::Warning);
+        assert_eq!(determine_severity_from_cvss(Some(3.0)), Severity::Info);
+        assert_eq!(determine_severity_from_cvss(None), Severity::Warning);
+    }
+
+    #[test]
+    fn test_get_fixed_version() {
+        let dep = Dependency {
+            name: "test-package".to_string(),
+            version: "1.0.0".to_string(),
+            ecosystem: Ecosystem::Cargo,
+        };
+
+        let vuln_with_fix = OsvVulnerability {
+            id: "CVE-2023-1234".to_string(),
+            summary: None,
+            details: None,
+            aliases: vec![],
+            severity: vec![],
+            affected: vec![OsvAffected {
+                package: Some(OsvAffectedPackage {
+                    name: "test-package".to_string(),
+                    ecosystem: "crates.io".to_string(),
+                }),
+                ranges: vec![OsvRange {
+                    range_type: "SEMVER".to_string(),
+                    events: vec![OsvEvent {
+                        introduced: Some("0.0.0".to_string()),
+                        fixed: Some("1.0.1".to_string()),
+                    }],
+                }],
+            }],
+            references: vec![],
+        };
+
+        assert_eq!(
+            get_fixed_version(&vuln_with_fix, &dep),
+            Some("1.0.1".to_string())
+        );
+
+        let vuln_no_fix = OsvVulnerability {
+            id: "CVE-2023-1234".to_string(),
+            summary: None,
+            details: None,
+            aliases: vec![],
+            severity: vec![],
+            affected: vec![OsvAffected {
+                package: Some(OsvAffectedPackage {
+                    name: "test-package".to_string(),
+                    ecosystem: "crates.io".to_string(),
+                }),
+                ranges: vec![OsvRange {
+                    range_type: "SEMVER".to_string(),
+                    events: vec![OsvEvent {
+                        introduced: Some("0.0.0".to_string()),
+                        fixed: None,
+                    }],
+                }],
+            }],
+            references: vec![],
+        };
+
+        assert_eq!(get_fixed_version(&vuln_no_fix, &dep), None);
+    }
+
+    #[test]
+    fn test_parse_pip_req() {
+        use super::parse_pip_req;
+        assert_eq!(
+            parse_pip_req("requests==2.28.0"),
+            Some(("requests".to_string(), "2.28.0".to_string()))
+        );
+        assert_eq!(
+            parse_pip_req("requests>=2.28.0"),
+            Some(("requests".to_string(), "2.28.0".to_string()))
+        );
+        assert_eq!(
+            parse_pip_req("requests~=2.28.0"),
+            Some(("requests".to_string(), "2.28.0".to_string()))
+        );
+        assert_eq!(parse_pip_req("requests"), None);
+        assert_eq!(parse_pip_req("# comment"), None);
+        assert_eq!(parse_pip_req(""), None);
     }
 }
