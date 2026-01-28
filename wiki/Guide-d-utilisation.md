@@ -91,6 +91,9 @@ repolens plan -vvv
 # Auditer uniquement certaines catégories
 repolens plan --only secrets,files
 
+# Auditer les dépendances et la sécurité
+repolens plan --only dependencies,security
+
 # Exclure certaines catégories
 repolens plan --exclude quality
 ```
@@ -196,6 +199,29 @@ repolens plan --only secrets -vv
 # puis relancer l'audit
 ```
 
+### Exemple 4 : Vérification de la sécurité des dépendances
+
+```bash
+# Vérifier les vulnérabilités dans les dépendances
+repolens plan --only dependencies
+
+# Vérifier la sécurité globale (code + dépendances)
+repolens plan --only security,dependencies -v
+```
+
+### Exemple 5 : Utilisation des règles personnalisées
+
+```bash
+# Définir des règles personnalisées dans .repolens.toml
+# Voir la page [Règles personnalisées](Custom-Rules) pour plus de détails
+
+# Lancer l'audit avec les règles personnalisées
+repolens plan --only custom
+
+# Ou inclure les règles personnalisées dans un audit complet
+repolens plan
+```
+
 ## Configuration avancée
 
 Consultez la page [Configuration](Configuration) pour les options avancées de configuration.
@@ -233,8 +259,33 @@ cat .repolens.toml
 repolens plan -vvv
 ```
 
+## Nouvelles fonctionnalités
+
+### Vérification de la sécurité des dépendances
+
+RepoLens vérifie automatiquement les vulnérabilités dans vos dépendances via l'API OSV et GitHub Security Advisories. Support multi-écosystèmes : Rust, Node.js, Python, Go.
+
+```bash
+# Vérifier les dépendances
+repolens plan --only dependencies
+```
+
+### Règles personnalisées
+
+Créez vos propres règles d'audit via des patterns regex ou des commandes shell. Voir la page [Règles personnalisées](Custom-Rules) pour plus de détails.
+
+### Couverture de tests
+
+RepoLens vérifie que la couverture de code atteint au moins 80%. Configurez les quality gates dans `.github/quality-gates.toml`.
+
+### Changelog automatique
+
+Le changelog est généré automatiquement lors des releases. Voir la page [Changelog Automatique](Changelog-Automatique) pour plus de détails.
+
 ## Prochaines étapes
 
 - Consultez la [Configuration](Configuration) pour personnaliser RepoLens
 - Découvrez les [Presets](Presets) disponibles
 - Explorez les [Catégories de règles](Categories-de-regles)
+- Apprenez à créer des [Règles personnalisées](Custom-Rules)
+- Découvrez le [Changelog Automatique](Changelog-Automatique)

@@ -134,8 +134,8 @@ jobs:
 
       - name: Check quality gates
         run: |
-          chmod +x scripts/check-quality-gates.sh
-          ./scripts/check-quality-gates.sh coverage/cobertura.xml clippy.json audit.json || exit 1
+          chmod +x .github/scripts/check-quality-gates.sh
+          ./.github/scripts/check-quality-gates.sh coverage/cobertura.xml clippy.json audit.json || exit 1
 
   # Build nightly
   build:

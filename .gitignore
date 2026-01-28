@@ -21,6 +21,7 @@ Thumbs.db
 # Test artifacts
 *.profraw
 *.profdata
+coverage/
 
 # Local config
 .env

@@ -205,11 +205,28 @@ require_signed_commits = true
 
 ## Gestion des dépendances
 
+### Vérification de la sécurité des dépendances
+
+RepoLens vérifie automatiquement les vulnérabilités dans vos dépendances via :
+
+- **OSV API** : Base de données open-source des vulnérabilités
+- **GitHub Security Advisories** : Base de données GitHub
+
+#### Support multi-écosystèmes
+
+- **Rust** : Analyse de `Cargo.lock`
+- **Node.js** : Analyse de `package-lock.json`
+- **Python** : Analyse de `requirements.txt`
+- **Go** : Analyse de `go.sum`
+
 ### Vérifications régulières
 
 ```bash
-# Vérifier les vulnérabilités
-repolens plan --only security
+# Vérifier les vulnérabilités dans les dépendances
+repolens plan --only dependencies
+
+# Vérifier la sécurité globale
+repolens plan --only security,dependencies
 
 # Utiliser Dependabot (GitHub)
 # Activer dans les paramètres du dépôt
@@ -220,6 +237,9 @@ repolens plan --only security
 - ✅ Mettre à jour régulièrement les dépendances
 - ✅ Tester après chaque mise à jour
 - ✅ Utiliser des versions fixes (lock files)
+- ✅ Vérifier les vulnérabilités avant chaque release
+- ✅ Configurer Dependabot pour les mises à jour automatiques
+- ✅ Surveiller les alertes de sécurité GitHub
 
 ## Tests
 
@@ -232,11 +252,52 @@ tests/
 └── fixtures/      # Données de test
 ```
 
-### Coverage
+### Couverture de code
 
-- ✅ Viser au moins 80% de coverage
-- ✅ Tester les cas limites
-- ✅ Tester les erreurs
+RepoLens exige une **couverture minimale de 80%** pour garantir la qualité du code.
+
+#### Configuration des quality gates
+
+Les seuils de qualité sont configurables dans `.github/quality-gates.toml` :
+
+```toml
+[coverage]
+minimum = 80.0  # Couverture minimale requise
+target = 90.0   # Objectif de couverture
+exclude = [
+    "src/main.rs",  # Point d'entrée, souvent difficile à tester
+    "src/lib.rs",   # Fichier de réexport
+    "tests/**",     # Tests eux-mêmes
+]
+```
+
+#### Vérification de la couverture
+
+```bash
+# Générer un rapport de couverture
+cargo tarpaulin --out Xml --output-dir coverage
+
+# Vérifier les quality gates
+cargo run --bin check-quality-gates
+```
+
+#### Intégration CI/CD
+
+La couverture est vérifiée automatiquement dans les workflows GitHub Actions :
+
+- Job `coverage` dans `.github/workflows/ci.yml`
+- Vérification des quality gates dans `.github/workflows/nightly.yml`
+- Upload des rapports vers Codecov (optionnel)
+
+### Bonnes pratiques pour la couverture
+
+- ✅ **Viser au moins 80% de coverage** (exigence minimale)
+- ✅ Tester les cas limites et les cas d'erreur
+- ✅ Tester les fonctions publiques de manière exhaustive
+- ✅ Utiliser des tests d'intégration pour les workflows complexes
+- ✅ Exclure les fichiers non testables (main.rs, lib.rs) du calcul
+- ✅ Surveiller l'évolution de la couverture dans le temps
+- ✅ Utiliser des outils comme `cargo-tarpaulin` pour Rust
 
 ## Code Review
 
@@ -251,6 +312,16 @@ tests/
 
 ## Sécurité
 
+### Audit de sécurité du code
+
+RepoLens effectue un audit complet de sécurité incluant :
+
+- **Détection de code unsafe** : Recherche de blocs `unsafe` dans le code de production
+- **Vérification des patterns dangereux** : Détection de patterns pouvant causer des vulnérabilités
+- **Analyse avec Semgrep** : Intégration avec Semgrep pour détecter les vulnérabilités OWASP
+- **Vérification des secrets** : Détection des secrets exposés
+- **Vérification des dépendances** : Scan des vulnérabilités dans les dépendances
+
 ### Checklist de sécurité
 
 - [ ] Aucun secret dans le code
@@ -258,7 +329,11 @@ tests/
 - [ ] Alertes de vulnérabilité activées
 - [ ] Dependabot configuré
 - [ ] Branches protégées
-- [ ] Reviews de code obligatoires
+- [ ] Reviews de code obligatoires (CODEOWNERS)
+- [ ] Aucun code `unsafe` dans le code de production
+- [ ] Fichiers de verrouillage des dépendances présents
+- [ ] Analyse de sécurité automatisée (Semgrep/CodeQL)
+- [ ] Vérification régulière des vulnérabilités des dépendances
 
 ## Performance
 

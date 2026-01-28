@@ -11,7 +11,7 @@ Un système complet de **Quality Gates** (seuils de qualité) qui bloque automat
 - **`.github/quality-gates.example.toml`** : Exemple avec des seuils plus souples pour le développement
 
 ### 2. Scripts de vérification
-- **`scripts/check-quality-gates.sh`** : Script shell pour vérifier les seuils (utilisé dans CI)
+- **`.github/scripts/check-quality-gates.sh`** : Script shell pour vérifier les seuils (utilisé dans CI)
 - **`scripts/check-quality-gates.rs`** : Version Rust du script (pour référence)
 
 ### 3. Documentation
@@ -64,7 +64,7 @@ cargo install cargo-tarpaulin cargo-audit cargo-outdated cargo-deny --locked
 cargo tarpaulin --out Xml --output-dir coverage
 
 # Vérifier les seuils
-./scripts/check-quality-gates.sh
+./.github/scripts/check-quality-gates.sh
 ```
 
 ## ⚙️ Configuration
@@ -138,7 +138,7 @@ La nightly build ne peut pas être créée.
 ### Ajouter de nouveaux seuils
 
 1. Ajoutez la section dans `.github/quality-gates.toml`
-2. Modifiez `scripts/check-quality-gates.sh` pour vérifier le nouveau seuil
+2. Modifiez `.github/scripts/check-quality-gates.sh` pour vérifier le nouveau seuil
 3. Mettez à jour la documentation
 
 ### Désactiver temporairement un seuil
@@ -172,7 +172,7 @@ Pour plus de détails, consultez :
 ## 🎓 Prochaines étapes
 
 1. **Ajustez les seuils** selon l'état actuel de votre projet
-2. **Testez localement** avec `./scripts/check-quality-gates.sh`
+2. **Testez localement** avec `./.github/scripts/check-quality-gates.sh`
 3. **Surveillez les nightly builds** pour voir les seuils en action
 4. **Augmentez progressivement** les seuils chaque mois
 

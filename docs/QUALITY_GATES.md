@@ -137,7 +137,7 @@ cargo install cargo-tarpaulin cargo-audit cargo-outdated cargo-deny --locked
 cargo tarpaulin --out Xml --output-dir coverage
 
 # Vérifier les seuils
-./scripts/check-quality-gates.sh
+./.github/scripts/check-quality-gates.sh
 ```
 
 ### Dans GitHub Actions
@@ -297,7 +297,7 @@ Vérifiez que :
 ## ✅ Checklist
 
 - [x] Fichier de configuration créé (`.github/quality-gates.toml`)
-- [x] Script de vérification créé (`scripts/check-quality-gates.sh`)
+- [x] Script de vérification créé (`.github/scripts/check-quality-gates.sh`)
 - [x] Workflow nightly mis à jour avec vérification des seuils
 - [x] Documentation complète
 - [ ] Tests du script de vérification

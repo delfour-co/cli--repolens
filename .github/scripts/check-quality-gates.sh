@@ -1,6 +1,6 @@
 #!/bin/bash
 # Script de vérification des seuils de qualité
-# Usage: ./scripts/check-quality-gates.sh [coverage_file] [clippy_file] [audit_file]
+# Usage: ./.github/scripts/check-quality-gates.sh [coverage_file] [clippy_file] [audit_file]
 
 set -euo pipefail
 
