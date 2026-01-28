@@ -1722,6 +1722,7 @@ dependencies = [
  "serde",
  "serde-sarif",
  "serde_json",
+ "sha2",
  "similar",
  "tempfile",
  "tera",
