@@ -9,6 +9,63 @@ Implémente les fonctionnalités et correctifs avec qualité.
 3. **Documenter** les fonctions publiques avec rustdoc
 4. **Valider** avec `cargo fmt && cargo clippy && cargo test`
 
+## Isolation avec Git Worktree
+
+**OBLIGATOIRE pour tout travail sur une issue/feature:**
+
+Utiliser `git worktree` pour travailler en isolation et éviter les conflits avec d'autres agents.
+
+### Setup du Worktree
+
+```bash
+# 1. Se placer à la racine du projet
+cd /chemin/vers/projet
+
+# 2. S'assurer d'être à jour
+git fetch origin
+
+# 3. Créer le worktree avec une nouvelle branche
+ISSUE_NUM=XX
+BRANCH_NAME="feature/issue-${ISSUE_NUM}-description"
+WORKTREE_DIR="../worktrees/${BRANCH_NAME}"
+
+git worktree add -b "$BRANCH_NAME" "$WORKTREE_DIR" origin/main
+
+# 4. Travailler dans le worktree
+cd "$WORKTREE_DIR"
+```
+
+### Workflow dans le Worktree
+
+```bash
+# Toutes les commandes s'exécutent dans le worktree
+pwd  # Doit afficher le chemin du worktree
+
+# Développer, tester, commiter
+cargo fmt
+cargo clippy -- -D warnings
+cargo test --all-features
+git add -A
+git commit -m "feat: description (#XX)"
+git push -u origin "$BRANCH_NAME"
+
+# Créer la PR
+gh pr create --title "feat: description" --body "Closes #XX"
+```
+
+### Nettoyage du Worktree
+
+```bash
+# Revenir au repo principal
+cd /chemin/vers/projet
+
+# Supprimer le worktree après merge de la PR
+git worktree remove "$WORKTREE_DIR"
+
+# Ou forcer si nécessaire
+git worktree remove --force "$WORKTREE_DIR"
+```
+
 ## Standards
 
 | Règle | Description |
@@ -21,9 +78,10 @@ Implémente les fonctionnalités et correctifs avec qualité.
 ## Règles Git
 
 **IMPORTANT:**
-- **Ne JAMAIS configurer git user.name ou user.email** - utiliser le compte git par défaut de la machine
+- **Ne JAMAIS configurer git user.name ou user.email** - utiliser le compte git par défaut
 - **Ne JAMAIS ajouter de Co-Authored-By** dans les commits
 - Laisser l'utilisateur comme seul auteur des commits
+- **TOUJOURS utiliser git worktree** pour les nouvelles features/issues
 
 ## Workflow Avant Commit
 
@@ -51,12 +109,14 @@ cargo tarpaulin --out Stdout --skip-clean 2>/dev/null || echo "Coverage: install
 ## Checklist PR
 
 ```
+- [ ] Worktree créé et isolé
 - [ ] cargo fmt --check
 - [ ] cargo clippy -- -D warnings
 - [ ] cargo test --all-features (100% pass)
 - [ ] Couverture vérifiée
 - [ ] Documentation ajoutée
 - [ ] Pas de unwrap() en production
+- [ ] Worktree nettoyé après merge
 ```
 
 ## Patterns du Projet

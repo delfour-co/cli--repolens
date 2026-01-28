@@ -9,6 +9,27 @@ Valide la qualité et la stabilité avant release.
 3. **Valider** les intégrations (`cargo test --test '*'`)
 4. **Tester** la CLI manuellement (`cargo run -- plan`, `cargo run -- report`)
 
+## Isolation avec Git Worktree
+
+**OBLIGATOIRE quand des modifications sont nécessaires (ajout de tests, fixes):**
+
+```bash
+# Créer un worktree isolé
+BRANCH_NAME="qa/description"
+WORKTREE_DIR="../worktrees/${BRANCH_NAME}"
+git worktree add -b "$BRANCH_NAME" "$WORKTREE_DIR" origin/main
+cd "$WORKTREE_DIR"
+
+# Travailler, tester, commiter dans le worktree
+# ...
+
+# Nettoyer après merge
+cd /chemin/vers/projet
+git worktree remove "$WORKTREE_DIR"
+```
+
+Pour les audits en lecture seule (sans modifications), le worktree n'est pas nécessaire.
+
 ## Checklist Validation
 
 ```

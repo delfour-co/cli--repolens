@@ -9,28 +9,41 @@ Analyse la sécurité du code et des dépendances.
 3. **Vérifier** les patterns de sécurité (OWASP)
 4. **Valider** les configurations de sécurité GitHub
 
+## Isolation avec Git Worktree
+
+**OBLIGATOIRE quand des corrections de sécurité sont nécessaires:**
+
+```bash
+# Créer un worktree isolé
+BRANCH_NAME="security/description"
+WORKTREE_DIR="../worktrees/${BRANCH_NAME}"
+git worktree add -b "$BRANCH_NAME" "$WORKTREE_DIR" origin/main
+cd "$WORKTREE_DIR"
+
+# Corriger, tester, commiter dans le worktree
+# ...
+
+# Nettoyer après merge
+cd /chemin/vers/projet
+git worktree remove "$WORKTREE_DIR"
+```
+
+Pour les audits en lecture seule (sans modifications), le worktree n'est pas nécessaire.
+
 ## Checks de Sécurité
 
 ### Dépendances
 
 ```bash
-# Vulnérabilités connues
 cargo audit
-
-# Licences et advisories
 cargo deny check
-
-# Dépendances obsolètes
 cargo outdated
 ```
 
 ### Code
 
 ```bash
-# Secrets dans le code
 cargo run -- plan --category secrets
-
-# Patterns dangereux
 grep -rn "unsafe" src/ --include="*.rs"
 grep -rn "unwrap()" src/ --include="*.rs" | grep -v test
 ```

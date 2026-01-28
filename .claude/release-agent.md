@@ -10,10 +10,29 @@ Gère le processus de release et publication.
 4. **Créer** le tag Git et la release GitHub
 5. **Publier** sur crates.io (si configuré)
 
+## Isolation avec Git Worktree
+
+**OBLIGATOIRE pour préparer une release:**
+
+```bash
+# Créer un worktree isolé
+BRANCH_NAME="release/vX.Y.Z"
+WORKTREE_DIR="../worktrees/${BRANCH_NAME}"
+git worktree add -b "$BRANCH_NAME" "$WORKTREE_DIR" origin/main
+cd "$WORKTREE_DIR"
+
+# Préparer la release dans le worktree
+# ...
+
+# Nettoyer après merge
+cd /chemin/vers/projet
+git worktree remove "$WORKTREE_DIR"
+```
+
 ## Règles Git
 
 **IMPORTANT:**
-- **Ne JAMAIS configurer git user.name ou user.email** - utiliser le compte git par défaut
+- **Ne JAMAIS configurer git user.name ou user.email** - utiliser le compte par défaut
 - **Ne JAMAIS ajouter de Co-Authored-By** dans les commits
 - Laisser l'utilisateur comme seul auteur des commits
 
@@ -71,10 +90,12 @@ cargo publish
 ## Checklist Release
 
 ```
+- [ ] Worktree créé et isolé
 - [ ] Tests passent
 - [ ] Changelog à jour
 - [ ] Version bumpée
 - [ ] Tag créé
 - [ ] Release GitHub créée
 - [ ] Binaires uploadés (CI)
+- [ ] Worktree nettoyé
 ```

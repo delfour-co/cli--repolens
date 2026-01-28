@@ -23,14 +23,48 @@ Configuration Claude Code pour le projet RepoLens.
 | [/pr-review](./commands/pr-review.md) | Review une PR |
 | [/security](./commands/security.md) | Audit de sécurité |
 
+## Git Worktree (Isolation Multi-Agents)
+
+Quand plusieurs agents travaillent en parallèle, chacun **DOIT** utiliser `git worktree` pour éviter les conflits:
+
+```bash
+# Chaque agent crée son worktree isolé
+git worktree add -b feature/issue-XX ../worktrees/feature/issue-XX origin/main
+
+# L'agent travaille dans son worktree
+cd ../worktrees/feature/issue-XX
+
+# Après merge, nettoyage
+git worktree remove ../worktrees/feature/issue-XX
+```
+
+### Pourquoi ?
+
+Les agents parallèles partagent le même dépôt git. Sans worktree:
+- Les `git checkout` s'écrasent mutuellement
+- Les fichiers modifiés sont perdus entre les branches
+- Les commits se mélangent
+
+Avec worktree, chaque agent a son propre répertoire de travail.
+
+### Structure
+
+```
+project/                    # Repo principal (main)
+../worktrees/
+├── feature/issue-4/        # Worktree agent #1
+├── feature/issue-10/       # Worktree agent #2
+└── feature/issue-20/       # Worktree agent #3
+```
+
 ## Workflow Typique
 
 ```
 1. /audit          → Identifier les problèmes
-2. @dev-agent      → Implémenter les fixes
+2. @dev-agent      → Implémenter les fixes (via worktree)
 3. @qa-agent       → Valider les changements
 4. /security       → Vérifier la sécurité
-5. /release        → Publier la version
+5. /release        → Publier la version (via worktree)
 ```
 
 ## Structure
