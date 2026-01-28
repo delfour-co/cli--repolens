@@ -14,8 +14,19 @@ A CLI tool to audit GitHub repositories for best practices, security, and compli
 
 ## Installation
 
+### From crates.io
+
+```bash
+cargo install repolens
+```
+
 ### Pre-built Binaries
 
+Download the latest release from the [Releases page](https://github.com/kdelfour/repolens/releases):
+
+```bash
+# Download and install
+wget https://github.com/kdelfour/repolens/releases/download/v0.1.0/repolens-linux-x86_64.tar.gz
 Pre-built binaries are available for all major platforms. Download the latest release from the [Releases page](https://github.com/delfour-co/cli--repolens/releases).
 
 #### Supported Platforms
@@ -94,8 +105,8 @@ repolens --version
 
 ```bash
 # Clone repository
-git clone https://github.com/delfour-co/cli--repolens.git
-cd cli--repolens
+git clone https://github.com/kdelfour/repolens.git
+cd repolens
 
 # Build
 cargo build --release
