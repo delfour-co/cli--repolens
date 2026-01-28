@@ -311,7 +311,7 @@ message = "TODO comment found"
         let config: Config = toml::from_str(toml_content).unwrap();
         assert!(config.custom_rules.rules.contains_key("no-todo"));
         let rule = config.custom_rules.rules.get("no-todo").unwrap();
-        assert_eq!(rule.pattern, "TODO");
+        assert_eq!(rule.pattern, Some("TODO".to_string()));
         assert_eq!(rule.severity, "warning");
     }
 }
