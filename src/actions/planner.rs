@@ -6,6 +6,7 @@
 use std::collections::HashMap;
 
 use crate::config::Config;
+use crate::providers::github::GitHubProvider;
 use crate::rules::results::AuditResults;
 
 use super::plan::{
@@ -61,7 +62,10 @@ impl ActionPlanner {
     /// # Returns
     ///
     /// An `ActionPlan` containing all planned actions
-    pub fn create_plan(&self, results: &AuditResults) -> ActionPlan {
+    pub async fn create_plan(
+        &self,
+        results: &AuditResults,
+    ) -> Result<ActionPlan, crate::error::RepoLensError> {
         let mut plan = ActionPlan::new();
 
         // Plan gitignore updates
@@ -99,15 +103,19 @@ impl ActionPlanner {
             }
         }
 
-        // Plan branch protection
+        // Plan branch protection (only if not already configured)
         if self.config.actions.branch_protection.enabled {
-            plan.add(self.plan_branch_protection());
+            if let Some(action) = self.plan_branch_protection_if_needed().await? {
+                plan.add(action);
+            }
         }
 
-        // Plan GitHub settings
-        plan.add(self.plan_github_settings());
+        // Plan GitHub settings (only if not already configured)
+        if let Some(action) = self.plan_github_settings_if_needed().await? {
+            plan.add(action);
+        }
 
-        plan
+        Ok(plan)
     }
 
     /// Plan .gitignore updates based on findings
@@ -291,15 +299,79 @@ impl ActionPlanner {
         )
     }
 
-    /// Plan branch protection configuration
+    /// Plan branch protection configuration if needed
     ///
-    /// Creates an action to configure branch protection settings based on
-    /// the configuration.
+    /// Checks the current branch protection status and creates an action only if
+    /// the current settings don't match the desired configuration.
     ///
     /// # Returns
     ///
-    /// An `Action` to configure branch protection
-    fn plan_branch_protection(&self) -> Action {
+    /// An `Action` to configure branch protection, or `None` if already configured correctly
+    async fn plan_branch_protection_if_needed(
+        &self,
+    ) -> Result<Option<Action>, crate::error::RepoLensError> {
+        let bp = &self.config.actions.branch_protection;
+
+        // Try to get current branch protection status
+        let provider = match GitHubProvider::new() {
+            Ok(p) => p,
+            Err(_) => {
+                // If GitHub CLI is not available, still plan the action
+                // (it will fail gracefully during apply)
+                return Ok(Some(self.create_branch_protection_action()));
+            }
+        };
+
+        let current_protection = match provider.get_branch_protection(&bp.branch) {
+            Ok(Some(protection)) => protection,
+            Ok(None) => {
+                // No protection exists, plan the action
+                return Ok(Some(self.create_branch_protection_action()));
+            }
+            Err(_) => {
+                // Error fetching protection, plan the action to be safe
+                return Ok(Some(self.create_branch_protection_action()));
+            }
+        };
+
+        // Check if current protection matches desired settings
+        let needs_update = {
+            // Check required approvals
+            let current_approvals = current_protection
+                .required_pull_request_reviews
+                .as_ref()
+                .map(|r| r.required_approving_review_count)
+                .unwrap_or(0);
+            let needs_approvals = current_approvals != bp.required_approvals;
+
+            // Check status checks
+            let has_status_checks = current_protection.required_status_checks.is_some();
+            let needs_status_checks = has_status_checks != bp.require_status_checks;
+
+            // Check force push blocking
+            // If block_force_push is true, we need allow_force_pushes.enabled to be false
+            // If block_force_push is false, we need allow_force_pushes.enabled to be true
+            let allows_force_push = current_protection
+                .allow_force_pushes
+                .as_ref()
+                .map(|a| a.enabled)
+                .unwrap_or(true);
+            // We need to update if: (block_force_push && allows_force_push) || (!block_force_push && !allows_force_push)
+            // Which simplifies to: allows_force_push == block_force_push
+            let needs_force_push_block = allows_force_push == bp.block_force_push;
+
+            needs_approvals || needs_status_checks || needs_force_push_block
+        };
+
+        if needs_update {
+            Ok(Some(self.create_branch_protection_action()))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Create a branch protection action
+    fn create_branch_protection_action(&self) -> Action {
         let bp = &self.config.actions.branch_protection;
 
         let settings = BranchProtectionSettings {
@@ -335,15 +407,98 @@ impl ActionPlanner {
         .with_details(details)
     }
 
-    /// Plan GitHub repository settings updates
+    /// Plan GitHub repository settings updates if needed
     ///
-    /// Creates an action to update GitHub repository settings like discussions,
-    /// vulnerability alerts, etc.
+    /// Checks the current repository settings and creates an action only if
+    /// the current settings don't match the desired configuration.
     ///
     /// # Returns
     ///
-    /// An `Action` to update GitHub settings
-    fn plan_github_settings(&self) -> Action {
+    /// An `Action` to update GitHub settings, or `None` if already configured correctly
+    async fn plan_github_settings_if_needed(
+        &self,
+    ) -> Result<Option<Action>, crate::error::RepoLensError> {
+        let gs = &self.config.actions.github_settings;
+
+        // Try to get current repository settings
+        let provider = match GitHubProvider::new() {
+            Ok(p) => p,
+            Err(_) => {
+                // If GitHub CLI is not available, still plan the action
+                // (it will fail gracefully during apply)
+                return Ok(Some(self.create_github_settings_action()));
+            }
+        };
+
+        let current_settings = match provider.get_repo_settings() {
+            Ok(settings) => settings,
+            Err(_) => {
+                // Error fetching settings, plan the action to be safe
+                return Ok(Some(self.create_github_settings_action()));
+            }
+        };
+
+        // Check vulnerability alerts
+        let current_vuln_alerts = match provider.has_vulnerability_alerts() {
+            Ok(enabled) => enabled,
+            Err(e) => {
+                tracing::debug!("Could not check vulnerability alerts status: {:?}", e);
+                // If we can't check, assume it needs to be set (safer)
+                true
+            }
+        };
+        let needs_vuln_alerts = current_vuln_alerts != gs.vulnerability_alerts;
+
+        // Check automated security fixes
+        let current_auto_fixes = match provider.has_automated_security_fixes() {
+            Ok(enabled) => enabled,
+            Err(e) => {
+                tracing::debug!("Could not check automated security fixes status: {:?}", e);
+                // If we can't check, assume it needs to be set (safer)
+                true
+            }
+        };
+        let needs_auto_fixes = current_auto_fixes != gs.automated_security_fixes;
+
+        // Check discussions
+        let needs_discussions = current_settings.has_discussions_enabled != gs.discussions;
+
+        // Check issues (if configured)
+        let needs_issues = current_settings.has_issues_enabled != gs.issues;
+
+        // Check wiki (if configured)
+        let needs_wiki = current_settings.has_wiki_enabled != gs.wiki;
+
+        tracing::debug!(
+            "GitHub settings check: discussions={} (current={}, desired={}), vuln_alerts={} (current={}, desired={}), auto_fixes={} (current={}, desired={})",
+            needs_discussions,
+            current_settings.has_discussions_enabled,
+            gs.discussions,
+            needs_vuln_alerts,
+            current_vuln_alerts,
+            gs.vulnerability_alerts,
+            needs_auto_fixes,
+            current_auto_fixes,
+            gs.automated_security_fixes
+        );
+
+        // Only create action if something needs to be changed
+        if needs_discussions || needs_issues || needs_wiki || needs_vuln_alerts || needs_auto_fixes
+        {
+            Ok(Some(self.create_github_settings_action_filtered(
+                needs_discussions,
+                needs_issues,
+                needs_wiki,
+                needs_vuln_alerts,
+                needs_auto_fixes,
+            )))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Create a GitHub settings action with all settings
+    fn create_github_settings_action(&self) -> Action {
         let gs = &self.config.actions.github_settings;
 
         let settings = GitHubRepoSettings {
@@ -363,6 +518,58 @@ impl ActionPlanner {
             details.push("Enable vulnerability alerts".to_string());
         }
         if gs.automated_security_fixes {
+            details.push("Enable automated security fixes".to_string());
+        }
+
+        Action::new(
+            "github-settings",
+            "github",
+            "Update repository settings",
+            ActionOperation::UpdateGitHubSettings { settings },
+        )
+        .with_details(details)
+    }
+
+    /// Create a GitHub settings action with only settings that need to be changed
+    fn create_github_settings_action_filtered(
+        &self,
+        needs_discussions: bool,
+        needs_issues: bool,
+        needs_wiki: bool,
+        needs_vuln_alerts: bool,
+        needs_auto_fixes: bool,
+    ) -> Action {
+        let gs = &self.config.actions.github_settings;
+
+        let settings = GitHubRepoSettings {
+            enable_discussions: if needs_discussions {
+                Some(gs.discussions)
+            } else {
+                None
+            },
+            enable_issues: if needs_issues { Some(gs.issues) } else { None },
+            enable_wiki: if needs_wiki { Some(gs.wiki) } else { None },
+            enable_vulnerability_alerts: if needs_vuln_alerts {
+                Some(gs.vulnerability_alerts)
+            } else {
+                None
+            },
+            enable_automated_security_fixes: if needs_auto_fixes {
+                Some(gs.automated_security_fixes)
+            } else {
+                None
+            },
+        };
+
+        let mut details = Vec::new();
+
+        if needs_discussions && gs.discussions {
+            details.push("Enable discussions".to_string());
+        }
+        if needs_vuln_alerts && gs.vulnerability_alerts {
+            details.push("Enable vulnerability alerts".to_string());
+        }
+        if needs_auto_fixes && gs.automated_security_fixes {
             details.push("Enable automated security fixes".to_string());
         }
 
@@ -395,7 +602,7 @@ mod tests {
             ".gitignore missing recommended entry: .env",
         ));
 
-        let plan = planner.create_plan(&results);
+        let plan = futures::executor::block_on(planner.create_plan(&results)).unwrap();
 
         assert!(!plan.is_empty());
         assert!(plan.actions().iter().any(|a| a.id() == "gitignore-update"));
@@ -414,7 +621,7 @@ mod tests {
             "LICENSE file is missing",
         ));
 
-        let plan = planner.create_plan(&results);
+        let plan = futures::executor::block_on(planner.create_plan(&results)).unwrap();
 
         assert!(plan.actions().iter().any(|a| a.id() == "license-create"));
     }
@@ -432,7 +639,7 @@ mod tests {
             "CONTRIBUTING file is missing",
         ));
 
-        let plan = planner.create_plan(&results);
+        let plan = futures::executor::block_on(planner.create_plan(&results)).unwrap();
 
         assert!(plan
             .actions()
@@ -455,7 +662,7 @@ mod tests {
             "CONTRIBUTING file is missing",
         ));
 
-        let plan = planner.create_plan(&results);
+        let plan = futures::executor::block_on(planner.create_plan(&results)).unwrap();
 
         // Should not include contributing because it's disabled in config
         assert!(!plan
