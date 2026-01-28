@@ -53,8 +53,10 @@ runs:
     - name: Determine version
       id: version
       shell: bash
+      env:
+        INPUT_VERSION: ${{ inputs.version }}
       run: |
-        if [ "${{ inputs.version }}" = "latest" ]; then
+        if [ "$INPUT_VERSION" = "latest" ]; then
           RELEASE_TAG=$(curl -s https://api.github.com/repos/kdelfour/repolens/releases/latest | grep '"tag_name"' | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/')
           if [ -z "$RELEASE_TAG" ] || [ "$RELEASE_TAG" = "null" ]; then
             echo "::error::Failed to determine latest RepoLens version from GitHub releases"
@@ -62,7 +64,7 @@ runs:
           fi
           VERSION="${RELEASE_TAG#v}"
         else
-          VERSION="${{ inputs.version }}"
+          VERSION="$INPUT_VERSION"
         fi
         echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
         echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
@@ -78,9 +80,10 @@ runs:
     - name: Install RepoLens
       if: steps.cache.outputs.cache-hit != 'true'
       shell: bash
+      env:
+        VERSION: ${{ steps.version.outputs.version }}
+        TAG: ${{ steps.version.outputs.tag }}
       run: |
-        VERSION="${{ steps.version.outputs.version }}"
-        TAG="${{ steps.version.outputs.tag }}"
         DOWNLOAD_URL="https://github.com/kdelfour/repolens/releases/download/${TAG}/repolens-linux-x86_64.tar.gz"
 
         echo "Downloading RepoLens ${VERSION} from ${DOWNLOAD_URL}..."
@@ -111,9 +114,15 @@ runs:
     - name: Run RepoLens audit
       id: audit
       shell: bash
+      env:
+        INPUT_FORMAT: ${{ inputs.format }}
+        RUNNER_TEMP: ${{ runner.temp }}
+        INPUT_FAIL_ON: ${{ inputs.fail-on }}
+        INPUT_PRESET: ${{ inputs.preset }}
+        INPUT_CONFIG: ${{ inputs.config }}
       run: |
         # Determine output file extension based on format
-        FORMAT="${{ inputs.format }}"
+        FORMAT="$INPUT_FORMAT"
         case "${FORMAT}" in
           json)   EXT="json" ;;
           sarif)  EXT="sarif" ;;
@@ -122,29 +131,26 @@ runs:
           *)      EXT="txt" ;;
         esac
 
-        REPORT_FILE="${{ runner.temp }}/repolens-report.${EXT}"
-        FAIL_ON="${{ inputs.fail-on }}"
-        PRESET="${{ inputs.preset }}"
-        CONFIG="${{ inputs.config }}"
+        REPORT_FILE="${RUNNER_TEMP}/repolens-report.${EXT}"
+        FAIL_ON="$INPUT_FAIL_ON"
+        PRESET="$INPUT_PRESET"
+        CONFIG="$INPUT_CONFIG"
 
-        # Build the command
-        CMD="repolens plan --preset ${PRESET} --format ${FORMAT}"
-
-        # Add config file if specified
-        if [ -n "${CONFIG}" ] && [ "${CONFIG}" != "" ]; then
-          CMD="${CMD} --config ${CONFIG}"
-        fi
-
-        # Add output file for non-terminal formats
-        if [ "${FORMAT}" != "terminal" ]; then
-          CMD="${CMD} --output ${REPORT_FILE}"
-        fi
-
-        echo "Running: ${CMD}"
-
-        # Execute and capture exit code
+        # Build command arguments array
         set +e
-        ${CMD}
+        if [ "${FORMAT}" = "terminal" ]; then
+          if [ -n "${CONFIG}" ] && [ "${CONFIG}" != "" ]; then
+            repolens plan --preset "${PRESET}" --format "${FORMAT}" --config "${CONFIG}"
+          else
+            repolens plan --preset "${PRESET}" --format "${FORMAT}"
+          fi
+        else
+          if [ -n "${CONFIG}" ] && [ "${CONFIG}" != "" ]; then
+            repolens plan --preset "${PRESET}" --format "${FORMAT}" --config "${CONFIG}" --output "${REPORT_FILE}"
+          else
+            repolens plan --preset "${PRESET}" --format "${FORMAT}" --output "${REPORT_FILE}"
+          fi
+        fi
         AUDIT_EXIT_CODE=$?
         set -e
 
