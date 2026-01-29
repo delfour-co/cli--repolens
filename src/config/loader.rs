@@ -9,8 +9,8 @@ use crate::error::{ConfigError, RepoLensError};
 
 use super::presets::Preset;
 use super::{
-    ActionsConfig, CacheConfig, CustomRulesConfig, LicenseComplianceConfig, RuleConfig,
-    SecretsConfig, TemplatesConfig, UrlConfig,
+    ActionsConfig, CacheConfig, CustomRulesConfig, HooksConfig, LicenseComplianceConfig,
+    RuleConfig, SecretsConfig, TemplatesConfig, UrlConfig,
 };
 
 const CONFIG_FILENAME: &str = ".repolens.toml";
@@ -57,6 +57,10 @@ pub struct Config {
     /// Cache configuration
     #[serde(default)]
     pub cache: CacheConfig,
+
+    /// Git hooks configuration
+    #[serde(default)]
+    pub hooks: HooksConfig,
 }
 
 fn default_preset() -> String {
@@ -75,6 +79,7 @@ impl Default for Config {
             custom_rules: CustomRulesConfig::default(),
             license_compliance: LicenseComplianceConfig::default(),
             cache: CacheConfig::default(),
+            hooks: HooksConfig::default(),
         }
     }
 }
@@ -301,6 +306,10 @@ mod tests {
         let config = Config::default();
         assert_eq!(config.preset, "opensource");
         assert!(config.actions.gitignore);
+        // Verify hooks default
+        assert!(config.hooks.pre_commit);
+        assert!(config.hooks.pre_push);
+        assert!(!config.hooks.fail_on_warnings);
     }
 
     #[test]
@@ -663,5 +672,106 @@ denied_licenses = ["GPL-3.0", "AGPL-3.0"]
         assert!(config.license_compliance.enabled);
         assert!(config.license_compliance.allowed_licenses.is_empty());
         assert!(config.license_compliance.denied_licenses.is_empty());
+    }
+
+    #[test]
+    fn test_config_with_hooks_section() {
+        let toml_content = r#"
+preset = "opensource"
+
+[hooks]
+pre_commit = false
+pre_push = true
+fail_on_warnings = true
+"#;
+        let config: Config = toml::from_str(toml_content).unwrap();
+        assert!(!config.hooks.pre_commit);
+        assert!(config.hooks.pre_push);
+        assert!(config.hooks.fail_on_warnings);
+    }
+
+    #[test]
+    fn test_config_without_hooks_section_uses_defaults() {
+        let toml_content = r#"
+preset = "enterprise"
+"#;
+        let config: Config = toml::from_str(toml_content).unwrap();
+        assert!(config.hooks.pre_commit);
+        assert!(config.hooks.pre_push);
+        assert!(!config.hooks.fail_on_warnings);
+    }
+
+    #[test]
+    fn test_config_to_toml_includes_hooks() {
+        let config = Config::default();
+        let toml_str = config.to_toml().unwrap();
+        assert!(toml_str.contains("pre_commit"));
+        assert!(toml_str.contains("pre_push"));
+        assert!(toml_str.contains("fail_on_warnings"));
+    }
+
+    #[test]
+    fn test_glob_match_double_star_slash_prefix_starts_with_suffix() {
+        assert!(glob_match("**/lib.rs", "lib.rs"));
+        assert!(glob_match("**/src/main.rs", "src/main.rs"));
+    }
+
+    #[test]
+    fn test_glob_match_double_star_after_prefix_strip() {
+        assert!(glob_match("src/**/test", "src/deep/nested/test"));
+        assert!(glob_match("src/**/test", "src/test"));
+        assert!(!glob_match("src/**/test", "other/test"));
+    }
+
+    #[test]
+    fn test_glob_match_double_star_fallback_ends_with() {
+        assert!(!glob_match("foo/**/bar", "baz/bar"));
+    }
+
+    #[test]
+    fn test_glob_match_single_star_first_part_not_at_start() {
+        assert!(!glob_match("foo*bar", "Xfoobar"));
+    }
+
+    #[test]
+    fn test_glob_match_single_star_part_not_found() {
+        assert!(!glob_match("abc*xyz", "abcdef"));
+    }
+
+    #[test]
+    fn test_config_load_from_file_with_hooks() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("config.toml");
+        fs::write(
+            &config_path,
+            r#"
+preset = "enterprise"
+
+[hooks]
+pre_commit = false
+pre_push = true
+fail_on_warnings = true
+"#,
+        )
+        .unwrap();
+
+        let config = Config::load_from_file(&config_path).unwrap();
+        assert_eq!(config.preset, "enterprise");
+        assert!(!config.hooks.pre_commit);
+        assert!(config.hooks.pre_push);
+        assert!(config.hooks.fail_on_warnings);
+    }
+
+    #[test]
+    fn test_config_load_from_file_without_hooks_uses_defaults() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("config.toml");
+        fs::write(&config_path, r#"preset = "strict""#).unwrap();
+
+        let config = Config::load_from_file(&config_path).unwrap();
+        assert_eq!(config.preset, "strict");
+        assert!(config.hooks.pre_commit);
+        assert!(config.hooks.pre_push);
+        assert!(!config.hooks.fail_on_warnings);
     }
 }

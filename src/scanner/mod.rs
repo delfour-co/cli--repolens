@@ -474,23 +474,20 @@ mod tests {
     }
 
     #[test]
-    fn test_files_in_directory_trailing_slash() {
+    fn test_files_in_directory_with_trailing_slash() {
         let temp_dir = create_test_repo();
         let scanner = Scanner::new(temp_dir.path().to_path_buf());
 
-        // Call with trailing slash to cover the "already has slash" path
-        let src_files = scanner.files_in_directory("src/");
-        assert!(src_files.len() >= 2);
+        let files = scanner.files_in_directory("src/");
+        assert!(files.len() >= 2);
     }
 
     #[test]
     fn test_repository_name_without_git_remote() {
-        // Create a temp dir without git to test the fallback path
         let temp_dir = TempDir::new().unwrap();
         fs::write(temp_dir.path().join("test.txt"), "content").unwrap();
         let scanner = Scanner::new(temp_dir.path().to_path_buf());
         let name = scanner.repository_name();
-        // Should return directory name as fallback
         assert!(!name.is_empty());
     }
 }
