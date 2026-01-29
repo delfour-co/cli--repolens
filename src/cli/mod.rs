@@ -6,7 +6,7 @@ pub mod output;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
-use commands::{ApplyArgs, InitArgs, PlanArgs, ReportArgs};
+use commands::{ApplyArgs, CompareArgs, InitArgs, PlanArgs, ReportArgs};
 
 /// RepoLens - Audit and prepare repositories for open source or enterprise standards
 #[derive(Parser, Debug)]
@@ -43,4 +43,7 @@ pub enum Commands {
 
     /// Generate an audit report
     Report(ReportArgs),
+
+    /// Compare two audit reports
+    Compare(CompareArgs),
 }

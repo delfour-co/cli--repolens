@@ -589,8 +589,8 @@ mod tests {
     use crate::config::Config;
     use crate::rules::results::{AuditResults, Finding, Severity};
 
-    #[test]
-    fn test_create_plan_includes_gitignore() {
+    #[tokio::test]
+    async fn test_create_plan_includes_gitignore() {
         let config = Config::default();
         let planner = ActionPlanner::new(config);
 
@@ -602,14 +602,14 @@ mod tests {
             ".gitignore missing recommended entry: .env",
         ));
 
-        let plan = futures::executor::block_on(planner.create_plan(&results)).unwrap();
+        let plan = planner.create_plan(&results).await.unwrap();
 
         assert!(!plan.is_empty());
         assert!(plan.actions().iter().any(|a| a.id() == "gitignore-update"));
     }
 
-    #[test]
-    fn test_create_plan_includes_license() {
+    #[tokio::test]
+    async fn test_create_plan_includes_license() {
         let config = Config::default();
         let planner = ActionPlanner::new(config);
 
@@ -621,13 +621,13 @@ mod tests {
             "LICENSE file is missing",
         ));
 
-        let plan = futures::executor::block_on(planner.create_plan(&results)).unwrap();
+        let plan = planner.create_plan(&results).await.unwrap();
 
         assert!(plan.actions().iter().any(|a| a.id() == "license-create"));
     }
 
-    #[test]
-    fn test_create_plan_includes_contributing() {
+    #[tokio::test]
+    async fn test_create_plan_includes_contributing() {
         let config = Config::default();
         let planner = ActionPlanner::new(config);
 
@@ -639,7 +639,7 @@ mod tests {
             "CONTRIBUTING file is missing",
         ));
 
-        let plan = futures::executor::block_on(planner.create_plan(&results)).unwrap();
+        let plan = planner.create_plan(&results).await.unwrap();
 
         assert!(plan
             .actions()
@@ -647,8 +647,8 @@ mod tests {
             .any(|a| a.id() == "contributing-create"));
     }
 
-    #[test]
-    fn test_create_plan_filters_by_config() {
+    #[tokio::test]
+    async fn test_create_plan_filters_by_config() {
         let mut config = Config::default();
         config.actions.contributing = false;
 
@@ -662,7 +662,7 @@ mod tests {
             "CONTRIBUTING file is missing",
         ));
 
-        let plan = futures::executor::block_on(planner.create_plan(&results)).unwrap();
+        let plan = planner.create_plan(&results).await.unwrap();
 
         // Should not include contributing because it's disabled in config
         assert!(!plan
@@ -671,8 +671,8 @@ mod tests {
             .any(|a| a.id() == "contributing-create"));
     }
 
-    #[test]
-    fn test_create_plan_includes_code_of_conduct() {
+    #[tokio::test]
+    async fn test_create_plan_includes_code_of_conduct() {
         let config = Config::default();
         let planner = ActionPlanner::new(config);
 
@@ -684,13 +684,13 @@ mod tests {
             "CODE_OF_CONDUCT file is missing",
         ));
 
-        let plan = planner.create_plan(&results);
+        let plan = planner.create_plan(&results).await.unwrap();
 
         assert!(plan.actions().iter().any(|a| a.id() == "coc-create"));
     }
 
-    #[test]
-    fn test_create_plan_includes_security_policy() {
+    #[tokio::test]
+    async fn test_create_plan_includes_security_policy() {
         let config = Config::default();
         let planner = ActionPlanner::new(config);
 
@@ -702,47 +702,47 @@ mod tests {
             "SECURITY.md is missing",
         ));
 
-        let plan = planner.create_plan(&results);
+        let plan = planner.create_plan(&results).await.unwrap();
 
         assert!(plan.actions().iter().any(|a| a.id() == "security-create"));
     }
 
-    #[test]
-    fn test_create_plan_includes_branch_protection() {
+    #[tokio::test]
+    async fn test_create_plan_includes_branch_protection() {
         let config = Config::default();
         let planner = ActionPlanner::new(config);
         let results = AuditResults::new("test-repo", "opensource");
 
-        let plan = planner.create_plan(&results);
+        let plan = planner.create_plan(&results).await.unwrap();
 
         assert!(plan.actions().iter().any(|a| a.id() == "branch-protection"));
     }
 
-    #[test]
-    fn test_create_plan_includes_github_settings() {
+    #[tokio::test]
+    async fn test_create_plan_includes_github_settings() {
         let config = Config::default();
         let planner = ActionPlanner::new(config);
         let results = AuditResults::new("test-repo", "opensource");
 
-        let plan = planner.create_plan(&results);
+        let plan = planner.create_plan(&results).await.unwrap();
 
         assert!(plan.actions().iter().any(|a| a.id() == "github-settings"));
     }
 
-    #[test]
-    fn test_create_plan_no_gitignore_needed() {
+    #[tokio::test]
+    async fn test_create_plan_no_gitignore_needed() {
         let config = Config::default();
         let planner = ActionPlanner::new(config);
         let results = AuditResults::new("test-repo", "opensource");
 
-        let plan = planner.create_plan(&results);
+        let plan = planner.create_plan(&results).await.unwrap();
 
         // No FILE003 findings, so no gitignore update
         assert!(!plan.actions().iter().any(|a| a.id() == "gitignore-update"));
     }
 
-    #[test]
-    fn test_create_plan_license_with_author_and_year() {
+    #[tokio::test]
+    async fn test_create_plan_license_with_author_and_year() {
         let mut config = Config::default();
         config.actions.license.author = Some("Test Author".to_string());
         config.actions.license.year = Some("2024".to_string());
@@ -757,20 +757,20 @@ mod tests {
             "LICENSE file is missing",
         ));
 
-        let plan = planner.create_plan(&results);
+        let plan = planner.create_plan(&results).await.unwrap();
 
         assert!(plan.actions().iter().any(|a| a.id() == "license-create"));
     }
 
-    #[test]
-    fn test_branch_protection_with_signed_commits() {
+    #[tokio::test]
+    async fn test_branch_protection_with_signed_commits() {
         let mut config = Config::default();
         config.actions.branch_protection.require_signed_commits = true;
 
         let planner = ActionPlanner::new(config);
         let results = AuditResults::new("test-repo", "opensource");
 
-        let plan = planner.create_plan(&results);
+        let plan = planner.create_plan(&results).await.unwrap();
 
         let bp_action = plan
             .actions()
