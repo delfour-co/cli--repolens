@@ -31,6 +31,9 @@ exclude = [
     "benches/",
 ]
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin)'] }
+
 [dependencies]
 # CLI framework
 clap = { version = "4", features = ["derive", "env", "color"] }
