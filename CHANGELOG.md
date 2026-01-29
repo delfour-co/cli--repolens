@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+#### License Compliance Checking (#9)
+- **New rule category `licenses`** with four rules:
+  - `LIC001`: No project license detected
+  - `LIC002`: Dependency license incompatible with project or not in allowed list
+  - `LIC003`: Dependency uses unknown/unrecognized license
+  - `LIC004`: Dependency has no license specified
+- **Project license detection** from LICENSE files, Cargo.toml, package.json, setup.cfg, pyproject.toml
+- **Dependency license parsing** from Cargo.toml, package.json (with node_modules), requirements.txt, go.mod
+- **License compatibility matrix** for common SPDX licenses (MIT, Apache-2.0, GPL-2.0, GPL-3.0, BSD, ISC, MPL-2.0, LGPL, AGPL, Unlicense, etc.)
+- **Configurable allowed/denied license lists** in `.repolens.toml`
+- Comprehensive test suite for license detection, parsing, and compatibility
+
 ### Changed
 
 - Increased CI coverage threshold from 90% to 95%

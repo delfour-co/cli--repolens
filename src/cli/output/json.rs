@@ -113,8 +113,8 @@ mod tests {
 
     #[test]
     fn test_json_output_default() {
-        let _output = JsonOutput;
-        // JsonOutput is a unit struct
+        let _output: JsonOutput = Default::default();
+        // JsonOutput is a unit struct, default should work the same as new
     }
 
     #[test]

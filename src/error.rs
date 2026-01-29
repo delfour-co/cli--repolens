@@ -532,4 +532,23 @@ mod tests {
         let provider_err = RepoLensError::Provider(ProviderError::NotAuthenticated);
         assert!(format!("{}", provider_err).contains("Provider error"));
     }
+
+    #[test]
+    fn test_repolens_error_from_toml_ser_error() {
+        // Create a toml::ser::Error by trying to serialize an invalid value
+        use serde::Serialize;
+
+        // A struct that produces a serialization error when targeting TOML
+        #[derive(Serialize)]
+        struct BadValue {
+            val: std::collections::HashMap<u32, String>,
+        }
+        let mut map = std::collections::HashMap::new();
+        map.insert(42, "test".to_string());
+        let bad = BadValue { val: map };
+        let ser_err = toml::to_string(&bad).unwrap_err();
+        let err: RepoLensError = ser_err.into();
+        let msg = format!("{}", err);
+        assert!(msg.contains("Config error"));
+    }
 }

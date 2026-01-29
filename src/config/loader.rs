@@ -9,8 +9,8 @@ use crate::error::{ConfigError, RepoLensError};
 
 use super::presets::Preset;
 use super::{
-    ActionsConfig, CacheConfig, CustomRulesConfig, RuleConfig, SecretsConfig, TemplatesConfig,
-    UrlConfig,
+    ActionsConfig, CacheConfig, CustomRulesConfig, LicenseComplianceConfig, RuleConfig,
+    SecretsConfig, TemplatesConfig, UrlConfig,
 };
 
 const CONFIG_FILENAME: &str = ".repolens.toml";
@@ -49,6 +49,11 @@ pub struct Config {
     #[serde(rename = "rules.custom")]
     pub custom_rules: CustomRulesConfig,
 
+    /// License compliance configuration
+    #[serde(default)]
+    #[serde(rename = "rules.licenses")]
+    pub license_compliance: LicenseComplianceConfig,
+
     /// Cache configuration
     #[serde(default)]
     pub cache: CacheConfig,
@@ -68,6 +73,7 @@ impl Default for Config {
             actions: ActionsConfig::default(),
             templates: TemplatesConfig::default(),
             custom_rules: CustomRulesConfig::default(),
+            license_compliance: LicenseComplianceConfig::default(),
             cache: CacheConfig::default(),
         }
     }
@@ -631,5 +637,31 @@ ttl_seconds = 3600
             config.templates.project_name,
             Some("My Project".to_string())
         );
+    }
+
+    #[test]
+    fn test_config_with_license_compliance() {
+        let toml_content = r#"
+preset = "opensource"
+
+["rules.licenses"]
+enabled = true
+allowed_licenses = ["MIT", "Apache-2.0", "BSD-3-Clause"]
+denied_licenses = ["GPL-3.0", "AGPL-3.0"]
+"#;
+        let config: Config = toml::from_str(toml_content).unwrap();
+        assert!(config.license_compliance.enabled);
+        assert_eq!(config.license_compliance.allowed_licenses.len(), 3);
+        assert_eq!(config.license_compliance.denied_licenses.len(), 2);
+        assert_eq!(config.license_compliance.allowed_licenses[0], "MIT");
+        assert_eq!(config.license_compliance.denied_licenses[0], "GPL-3.0");
+    }
+
+    #[test]
+    fn test_config_default_license_compliance() {
+        let config = Config::default();
+        assert!(config.license_compliance.enabled);
+        assert!(config.license_compliance.allowed_licenses.is_empty());
+        assert!(config.license_compliance.denied_licenses.is_empty());
     }
 }
