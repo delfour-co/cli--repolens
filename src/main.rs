@@ -8,6 +8,7 @@ use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 mod actions;
 mod cache;
 mod cli;
+mod compare;
 mod config;
 mod error;
 mod hooks;
@@ -47,6 +48,7 @@ async fn main() -> Result<(), RepoLensError> {
         Commands::Apply(args) => cli::commands::apply::execute(args).await,
         Commands::Report(args) => cli::commands::report::execute(args).await,
         Commands::Schema(args) => cli::commands::schema::execute(args).await,
+        Commands::Compare(args) => cli::commands::compare::execute(args).await,
         Commands::InstallHooks(args) => cli::commands::install_hooks::execute(args).await,
     };
 

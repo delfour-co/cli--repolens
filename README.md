@@ -8,6 +8,7 @@ A CLI tool to audit GitHub repositories for best practices, security, and compli
 - Detect exposed secrets and credentials
 - Check for required files (README, LICENSE, CONTRIBUTING, etc.)
 - Validate GitHub workflows and Actions
+- Verify license compliance across dependencies
 - Generate actionable fix plans
 - Apply fixes automatically or with dry-run mode
 - Multiple output formats: terminal, JSON, SARIF, Markdown, HTML
@@ -280,6 +281,38 @@ The schema defines the following structure:
 
 When using `--schema`, the JSON output includes a `$schema` field referencing the schema URI. When using `--validate`, the output is validated against the schema before being emitted.
 
+### Comparing Audits
+
+Compare two previously generated JSON audit reports to visualize improvements and regressions between runs.
+
+```bash
+# First, generate two JSON reports at different points in time
+repolens report --format json --output report-before.json
+# ... make changes ...
+repolens report --format json --output report-after.json
+
+# Compare the two reports (terminal output with colors)
+repolens compare --base-file report-before.json --head-file report-after.json
+
+# Output as JSON
+repolens compare --base-file report-before.json --head-file report-after.json --format json
+
+# Output as Markdown
+repolens compare --base-file report-before.json --head-file report-after.json --format markdown
+
+# Save comparison to a file
+repolens compare --base-file report-before.json --head-file report-after.json --output comparison.md --format markdown
+
+# Fail with exit code 1 if new issues are detected (useful in CI)
+repolens compare --base-file baseline.json --head-file current.json --fail-on-regression
+```
+
+The comparison report includes:
+- **Score summary**: Weighted score (Critical=10, Warning=3, Info=1) with diff
+- **New issues**: Findings present in the head report but not in the base (regressions)
+- **Resolved issues**: Findings present in the base report but not in the head (improvements)
+- **Category breakdown**: Per-category count changes
+
 ## Configuration
 
 Create a `.repolens.toml` file in your repository root:
@@ -424,6 +457,33 @@ When `fail_on_warnings` is `true`, hooks will also fail on warning-level finding
 - **security**: Security best practices and policies
 - **workflows**: CI/CD and GitHub Actions validation
 - **quality**: Code quality standards
+- **licenses**: License compliance checking (LIC001-LIC004)
+
+### License Compliance Rules
+
+RepoLens can detect and verify license compliance for your project and its dependencies:
+
+| Rule | Severity | Description |
+|------|----------|-------------|
+| LIC001 | Warning | No project license detected |
+| LIC002 | Critical/Warning | Dependency license incompatible or not allowed |
+| LIC003 | Info | Dependency uses unknown/unrecognized license |
+| LIC004 | Warning | Dependency has no license specified |
+
+Supported dependency files:
+- `Cargo.toml` (Rust)
+- `package.json` / `node_modules/*/package.json` (Node.js)
+- `requirements.txt` (Python)
+- `go.mod` (Go)
+
+Configure allowed and denied licenses in `.repolens.toml`:
+
+```toml
+["rules.licenses"]
+enabled = true
+allowed_licenses = ["MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC"]
+denied_licenses = ["GPL-3.0", "AGPL-3.0"]
+```
 
 ## GitHub Action
 
